@@ -1,7 +1,7 @@
-function doGet() {
+function doGet(e) {
   
 }
 
-function doPost() {
+function doPost(e) {
   
 }
