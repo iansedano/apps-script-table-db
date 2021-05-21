@@ -4,7 +4,7 @@
  * @param {string} tableName
  * @param {array} ids
  */
-function getByIds(tableName, ids) {
+function get(tableName, ids) {
   const table = new Table(tableName)
   const filteredData = table.data.filter(row => ids.include(row[0]));
   return {headers: table.headers, metadata: table.metadata, data: filteredData};
