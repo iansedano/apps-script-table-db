@@ -2,40 +2,45 @@ function doGet(e) {
   const query = e.parameters.q
   const fields = e.parameters.fields
 
-  const table = params.table
-  const method = params.method
-  const ids = params.ids
+  if (query.length > 1 || fields.length > 1) {
+    return response ({
+      status: 400,
+      message: "check query and field syntax"
+    })
+  }
+
+  return response({
+    "query": query[0],
+    "fields": fields[0]
+  })
+
+  // route('GET', query, {"fields": fields})
 }
 
 function doPost(e) {
   sLog(e.postData)
-  return respond({"OK": 1})
+  sLog(e.parameters)
+  return response({"postData": e.postData, "postParams": e.parameters})
 }
 
-function testo() {
-  sLog({"test": 1})
-}
-
-function respond(response) {
+function response(obj) {
+  console.log(obj)
+  if (typeof(obj) === 'object' && obj !== null){
     return ContentService
-        .createTextOutput(response)
-        .setMimeType(ContentService.MimeType.JSON)
-}
-
-function sLog(value) {
-  const file = SpreadsheetApp.openById("1uE5sT_84Uv-qiUXdPDPkPJXN4VNEUG6OC3d4arFA-rM");
-  const sheet = file.getSheetByName('post_log');
-  sheet.appendRow([1,1])
-  sheet.appendRow([new Date(), JSON.stringify(value)])
+      .createTextOutput(JSON.stringify(obj))
+  } else {
+    throw "invalid response, must be object"
+  }
+  
 }
 
 /**
  * q
  *  days
- *      now
+ *      today
  *      date
  *  weeks
- *      now
+ *      thisweek
  *      date
  * 
  * fields
@@ -51,17 +56,11 @@ function sLog(value) {
  */
 
 /*
-let url = 'https://script.google.com/macros/s/AKfycbzcVW64IuVbqsLCRec-QjszGlxzlrcZc392xpSDwsHEhPJWWO0JaZZhNM2IrOoorm61/exec'
+let url = 'https://script.google.com/macros/s/[ID]/exec'
 let content = {
-        method: 'POST', // *GET, POST, PUT, DELETE, etc.
-        mode: 'no-cors', // no-cors, *cors, same-origin
-        headers: {
-            'Content-Type': 'application/json'
-
-        },
-        body: JSON.stringify({"hello":"1"}) // body data type must match "Content-Type" header
+        method: 'POST',
+        body: JSON.stringify({"hello":"1"})
     }
-
 fetch(url, content)
-    .then(resp => console.log(resp))
+    .then(resp => console.log(resp.json()))
  */
