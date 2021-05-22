@@ -1,4 +1,6 @@
 function doGet(e) {
+  sLog("GET received")
+  sLog(e.parameters)
   const query = e.parameters.q
   const fields = e.parameters.fields
 
@@ -9,17 +11,28 @@ function doGet(e) {
     })
   }
 
+  result = route('GET', query, {"fields": fields})
+
   return response({
     "query": query[0],
     "fields": fields[0]
   })
-
-  // route('GET', query, {"fields": fields})
 }
 
 function doPost(e) {
+  sLog("POST received")
   sLog(e.postData)
   sLog(e.parameters)
+
+  const query = e.parameters.q[0]
+  if (typeof(query) !== 'string') {
+    sLog("ERROR: invalid query")
+    throw  "invalid query"
+  }
+  const payload = JSON.parse(e.postData.contents)
+
+  result = route('POST', query, payload)
+
   return response({"postData": e.postData, "postParams": e.parameters})
 }
 
@@ -64,3 +77,5 @@ let content = {
 fetch(url, content)
     .then(resp => console.log(resp.json()))
  */
+// https://github.com/tanaikech/taking-advantage-of-Web-Apps-with-google-apps-script#corsinwebapps
+// https://x-team.com/blog/google-apps-script-rest/
