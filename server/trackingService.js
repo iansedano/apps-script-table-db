@@ -25,7 +25,12 @@ function trackingService(method, path, body) {
 
 function getDate(date) {
     const table = new Table("Tracking")
-    table.data()
+
+    
+    
+    table.data.filter(row => {
+
+    })
 
 }
 
