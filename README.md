@@ -1,0 +1,1 @@
+All columns except for date index should be string formatted.

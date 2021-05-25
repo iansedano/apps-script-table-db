@@ -1,22 +1,13 @@
 function doGet(e) {
   sLog("GET received")
   sLog(e.parameters)
-  const query = e.parameters.q
+
+  const path = e.parameters.path
   const fields = e.parameters.fields
 
-  if (query.length > 1 || fields.length > 1) {
-    return response ({
-      status: 400,
-      message: "check query and field syntax"
-    })
-  }
+  result = route('GET', path, {"fields": fields})
 
-  result = route('GET', query, {"fields": fields})
-
-  return response({
-    "query": query[0],
-    "fields": fields[0]
-  })
+  return respond(result)
 }
 
 function doPost(e) {
@@ -24,19 +15,24 @@ function doPost(e) {
   sLog(e.postData)
   sLog(e.parameters)
 
-  const query = e.parameters.q[0]
-  if (typeof(query) !== 'string') {
-    sLog("ERROR: invalid query")
-    throw  "invalid query"
+  const path = e.parameters.path[0]
+
+  let payload;
+  try {
+    payload = JSON.parse(e.postData.contents)
+  } catch (e) {
+    return respond ({
+      message: "ERROR: check body"
+    })
   }
-  const payload = JSON.parse(e.postData.contents)
+  
+  result = route('POST', path, payload)
 
-  result = route('POST', query, payload)
-
-  return response({"postData": e.postData, "postParams": e.parameters})
+  return respond(result)
 }
 
-function response(obj) {
+
+function respond(obj) {
   console.log(obj)
   if (typeof(obj) === 'object' && obj !== null){
     return ContentService
@@ -48,13 +44,10 @@ function response(obj) {
 }
 
 /**
- * q
- *  days
- *      today
- *      date
- *  weeks
- *      thisweek
- *      date
+ * path
+ *  trackingEntries
+ *    date
+ *    week
  * 
  * fields
  *  i.e
