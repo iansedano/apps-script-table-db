@@ -7,15 +7,13 @@ function setDateToMidnight(inputDate, nextDay) {
 
     if (nextDay === false) {
         return new Date(year, month, date)
-    } else if (nextDat === true) {
-        const output =  new Date(year, month, date)
-        output.setDate(output.getDate() + 1)
-        return output
+    } else if (nextDay === true) {
+        return addDays(output, 1)
     }
 
 }
 
-function yearMonthDateMatch(dateA, dateB) {
+function YMDMatch(dateA, dateB) {
     const [yearA, monthA, dayOfMonthA] = [
         dateA.getFullYear(),
         dateA.getMonth(),
@@ -37,7 +35,7 @@ function yearMonthDateMatch(dateA, dateB) {
     return false
 }
 
-function getIndexFromDate(date) {
+function getYMDComponentsFromDate(date) {
     const isDateObject = 
         date
         &&
@@ -50,60 +48,67 @@ function getIndexFromDate(date) {
         let month = date.getMonth() + 1
         let day = date.getDate()
 
-        // if (month.toString().length === 1){
-        //     month = '0' + month
-        // }
-
-        // if (day.toString().length === 1) {
-        //     day = '0' + day
-        // }
-
-        return `${year}-${month}-${day}`
+        return [year, month, day]
 
     } else throw "not a date!"
 }
 
 
+/**
+ * This function takes in a date and returns two dates spanning
+ * Monday to Sunday (7 days).
+ */
+ function getWeekBoundaries(givenDate) {
 
-function isValidIndex(index) {
-    return typeof(index) === 'string' && 
-    (index.length <= 10 || index.length >= 8)
-}
+    const BOUNDARY_MAP = {
+        1: [ 0, 6],
+        2: [-1, 5],
+        3: [-2, 4],
+        4: [-3, 3],
+        5: [-4, 2],
+        6: [-5, 1],
+        0: [-6, 0]
+      }
 
+    const startingDay = givenDate.getDay()
+  
+    const startDate = addDays(givenDate, BOUNDARY_MAP[startingDay][0])
+    const endDate = addDays(givenDate, BOUNDARY_MAP[startingDay][1])
+  
+    if (endDate.getTime() - startDate.getTime() !== 691200000) {
+      throw "Something went wrong while calculating week"
+    }
+    return [startDate, endDate]
+  }
 
-function getDateFromIndex(index) {
+  function getWeekList(date) {
+    const [start, end] = getWeekBoundaries(date);
 
-    if (isValidIndex(index)) {
-        let [ year, month, day ] = index.split('-')//add map here?
-        year = parseInt(year)
-        month = parseInt(month) - 1
-        day = parseInt(day) -1
-    
-        return new Date(year, month, day)
-    } else throw "Invalid index!"
-}
+    const week = [start]
 
-
-function getIndexComponentsFromIndex(index) {
-    if (isValidIndex(index)) {
-        const [ year, month, day ]  = index.split('-')
-        return {
-            year:parseInt(year),
-            month:parseInt(month),
-            day:parseInt(day)
-        }
-    } else throw "invalid index!"
-}
-
-function getIndexComponentsFromDate(date) {
-    const index = getIndexFromDate(date)
-    const indexComponents = getIndexComponentsFromIndex(index)
-    Logger.log(indexComponents)
-    return indexComponents
-}
-
-
-
-
-
-
+    for (let i=0; i!=5; i++) {
+        week.push(addDays(week[i], 1))
+    }
+    week.push(end)
+    return week
+  }
+  
+  function addDays(date, days) {
+    const output = new Date(date);
+    output.setDate(output.getDate() + days);
+    return output;
+  }
+  
+  function getMidnight(inputDate) {
+    const [ year, month, date ] = [
+      inputDate.getFullYear(),
+      inputDate.getMonth(),
+      inputDate.getDate()
+    ]
+    return new Date(year, month, date);
+  }
+  
+  function msToHrs(t) {
+    return (( (t/1000) / 60 ) / 60).toPrecision(2)
+  }
+  
