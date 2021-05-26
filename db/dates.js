@@ -75,9 +75,9 @@ function getYMDComponentsFromDate(date) {
     const startDate = addDays(givenDate, BOUNDARY_MAP[startingDay][0])
     const endDate = addDays(givenDate, BOUNDARY_MAP[startingDay][1])
   
-    if (endDate.getTime() - startDate.getTime() !== 691200000) {
-      throw "Something went wrong while calculating week"
-    }
+    // if (endDate.getTime() - startDate.getTime() !== 691200000) {
+    //   throw "Something went wrong while calculating week"
+    // }
     return [startDate, endDate]
   }
 

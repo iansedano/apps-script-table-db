@@ -8,9 +8,8 @@ class Table {
     this.headers = this.values[0];
     if (this.headers[0] !== "id") throw "first column is not id"
     this.metadata = this.values[1];
-    this.data = this.convertIdsToInt(values.slice(2))
-    this.ids = this.data.map(row => row[0])
-    if (allKeysUnique(this.ids) === false) throw "all keys are not unique!"
+    this.data = this.convertIdsToInt(this.values.slice(2))
+    if (this.allKeysUnique(this.data.map(row => row[0])) === false) throw "all keys are not unique!"
   }
   
   /**

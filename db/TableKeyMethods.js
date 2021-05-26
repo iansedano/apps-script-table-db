@@ -15,17 +15,19 @@ Table.prototype.createUniqueKey = () => {
 /**
  * @param {array} ids
  */
-Table.prototype.allKeysUnique = () => {
+Table.prototype.allKeysUnique = (ids) => {
+
   const checker = {};
   try {
-    this.ids.forEach((id) => {
+    ids.forEach((id) => {
       if (checker.hasOwnProperty(id)) {
-        throw "duplicate keys!";
+        throw "duplicate key! " + id;
       } else {
         checker[id] = 1;
       }
     });
   } catch (e) {
+    console.log(e)
     return false;
   }
   return true;
