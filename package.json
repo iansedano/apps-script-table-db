@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iansedano/tracker_backend.git"
+    "url": "git+https://github.com/iansedano/apps_script_sheet_db.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/iansedano/tracker_backend/issues"
+    "url": "https://github.com/iansedano/apps_script_sheet_db/issues"
   },
-  "homepage": "https://github.com/iansedano/tracker_backend#readme",
+  "homepage": "https://github.com/iansedano/apps_script_sheet_db#readme",
   "dependencies": {
     "@types/google-apps-script": "^1.0.41"
   }
