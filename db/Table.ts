@@ -33,7 +33,7 @@ interface Table {
   _loadAllValues(): void;
   _loadHeaders(): void;
   addRow(row: Array<any>): void;
-  updateValue(idToUpdate: number, headerName: string): void;
+  updateValue(idToUpdate: number, headerName: string, value: any): number;
   updateRow(idToUpdate: number, row: Array<any>): void;
   deleteRow(idToDelete: number): void;
   createUniqueKeys(numberOfKeys: number): Array<number>;
@@ -46,7 +46,8 @@ class Table {
   }
 
   _loadHeaders(): void {
-    this.headers = this.sheet.getRange("1:1").getValues()[0];
+    if (!this.dataRange) this._loadDataRange();
+    this.headers = this.sheet.getRange(1, 1, 1, this.numColumns).getValues()[0];
     if (this.headers[0] !== "id") throw "first column is not id";
   }
 
@@ -86,8 +87,7 @@ class Table {
     if (!this.dataRange) this._loadDataRange();
 
     for (const [index, id] of this.ids.entries()) {
-      // searchId - 1 because rows begin at 1 not 0
-      if (id === searchId - 1) {
+      if (id === searchId) {
         // index + 1 because rows begin at 1 not 0
         const rowNumber = index + 1;
         const row = this.sheet
@@ -98,6 +98,18 @@ class Table {
     }
 
     return undefined;
+  }
+
+  getRowNumber(searchId: number): number {
+    if (!this.ids) this._loadIds();
+
+    for (const [index, id] of this.ids.entries()) {
+      if (id === searchId) {
+        // index + 1 because rows begin at 1 not 0
+        const rowNumber = index + 1;
+        return rowNumber;
+      }
+    }
   }
 
   getRowsByValue(headerName: string, query: any): Array<RowResult> {
@@ -134,71 +146,84 @@ class Table {
 
     return rowResults;
   }
-  
+
   _refreshMetaData() {
     if (this.ids) this._loadIds();
+    // TODO - maybe have a different method for headers?
     if (this.headers) this._loadHeaders();
     if (this.dataRange) this._loadDataRange();
     if (this.allValues) this._loadAllValues();
   }
-  
+
   createUniqueKeys(numberOfKeys: number): Array<number> {
     if (!this.ids) this._loadIds();
-    
-    const currentIds = this.keysCreated ?
-                        [...this.ids, ...this.keysCreated] :
-                        this.ids
-    const sortedIds = currentIds.sort((idA, idB) => idA - idB)
-    
-    const newKeys = []
-    for (let i=0; i!=numberOfKeys; i++ ){
-      newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i)
+
+    const currentIds = this.keysCreated
+      ? [...this.ids, ...this.keysCreated]
+      : this.ids;
+    const sortedIds = currentIds.sort((idA, idB) => idA - idB);
+
+    const newKeys = [];
+    for (let i = 0; i != numberOfKeys; i++) {
+      newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i);
     }
-    
+
     if (!this.keysCreated) {
-      this.keysCreated = newKeys
+      this.keysCreated = newKeys;
     } else {
-      this.keysCreated.push(...newKeys)
+      this.keysCreated.push(...newKeys);
     }
-  
+
     return newKeys;
-  };
-  
-  addRow(row: Array<any>): void {
+  }
+
+  addRow(row: Array<any>): number {
     if (!this.dataRange) this._loadDataRange();
-    if (row.length > this.numColumns) throw "too many values for number of named columns";
-    if (row[0] != false) throw "id position (index 0) must be falsy (it will be discarded and a new key created)";
+    if (row.length > this.numColumns)
+      throw "too many values for number of named columns";
+    if (row[0] != false)
+      throw "id position (index 0) must be falsy (it will be discarded and a new key created)";
     row[0] = this.createUniqueKeys(1)[0];
     // TODO - type consistency?
     this.sheet.appendRow(row);
     this._refreshMetaData();
-    return row[0] // returning new ID
-  };
+    return row[0]; // returning new ID
+  }
 
-  updateValue(idToUpdate: number, headerName: string): void {
+  updateValue(idToUpdate: number, headerName: string, value: any): number {
+    if (!this.ids) this._loadIds();
+    if (!this.headers) this._loadHeaders();
+    if (!this.headers.includes(headerName)) return undefined;
+
+    const rowNumber: number = this.getRowNumber(idToUpdate);
+
+    const colNumber = this.headers.indexOf(headerName) + 1;
+
+    this.sheet.getRange(rowNumber, colNumber).setValue(value);
+    return rowNumber;
+  }
+
+  updateRow(idToUpdate: number, newRowValues: Array<any>): void {
     if (!this.ids) this._loadIds();
     if (!this.headers) this._loadHeaders();
 
-    const { rowNumber } = this.getRow(id);
+    const { rowNumber, row } = this.getRow(idToUpdate);
 
-    const colIndex = this.headers.indexOf(header);
-    if (colIndex === -1) throw "No such header";
+    if (row[0] !== newRowValues[0]) throw "IDs don't match";
+    if (row.length > this.headers.length) throw "wrong size of row";
 
-    this.sheet.getRange(rowNumber, colIndex).setValue(value);
-    return { rowUpdated: rowNumber };
-  };
+    this.sheet
+      .getRange(rowNumber, 1, 1, newRowValues.length)
+      .setValues([newRowValues]); // must be Array<Array<any>>
+  }
 
-  updateRow(idToUpdate: number, row: Array<any>): void {
+  deleteRow(idToDelete: number): void {
     if (!this.ids) this._loadIds();
-    if (!this.headers) this._loadHeaders();
+    if (!this.dataRange) this._loadDataRange();
 
-    const { rowNumber } = this.getRow(row[id]);
-    if (row.length !== this.headers.length) throw "wrong size of row";
+    const rowNumber: number = this.getRowNumber(idToDelete);
 
-    this.sheet.getRange(rowNumber, 1, 1, headers.length).setValues(row);
-  };
-
-  deleteRow(idToDelete: number): void; {
-    // TODO
-  };
+    this.sheet.deleteRow(rowNumber);
+    this._refreshMetaData();
+  }
 }
