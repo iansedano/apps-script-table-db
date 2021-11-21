@@ -80,7 +80,8 @@ class Table {
     if (!this.dataRange) this._loadDataRange();
 
     for (const [index, id] of this.ids.entries()) {
-      if (id === searchId) {
+      // searchId - 1 because rows begin at 1 not 0
+      if (id === searchId - 1) {
         // index + 1 because rows begin at 1 not 0
         const rowNumber = index + 1;
         const row = this.sheet
