@@ -1,0 +1,22 @@
+{
+  "name": "apps_script_sheet_db",
+  "version": "1.0.0",
+  "description": "All columns except for date index should be string formatted.",
+  "main": "\"\"",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iansedano/tracker_backend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/iansedano/tracker_backend/issues"
+  },
+  "homepage": "https://github.com/iansedano/tracker_backend#readme",
+  "dependencies": {
+    "@types/google-apps-script": "^1.0.41"
+  }
+}
