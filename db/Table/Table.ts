@@ -19,18 +19,24 @@ interface ColumnResult {
 interface Table {
   file: GoogleAppsScript.Spreadsheet.Spreadsheet;
   sheet: GoogleAppsScript.Spreadsheet.Sheet;
-  ids: Array<number>;
-  headers: Array<string>;
+  ids?: Array<number>;
+  headers?: Array<string>;
   dataRange?: GoogleAppsScript.Spreadsheet.Range;
   allValues?: Array<Array<any>>;
   numRows?: number;
   numColumns?: number;
+  keysCreated?: Array<number>;
 
   getRow(id: number): RowResult;
   getRowsByValue(headerName: string, value: any): Array<RowResult>;
   _loadIds(): void;
   _loadAllValues(): void;
   _loadHeaders(): void;
+  addRow(row: Array<any>): void;
+  updateValue(idToUpdate: number, headerName: string): void;
+  updateRow(idToUpdate: number, row: Array<any>): void;
+  deleteRow(idToDelete: number): void;
+  createUniqueKeys(numberOfKeys: number): Array<number>;
 }
 
 class Table {
@@ -115,12 +121,7 @@ class Table {
           output.push({
             rowNumber,
             row: this.sheet
-              .getRange(
-                rowNumber,
-                columnResult.columnNumber,
-                1,
-                this.numColumns
-              )
+              .getRange(rowNumber, 1, 1, this.numColumns)
               .getValues()[0]
           });
         }
@@ -133,4 +134,63 @@ class Table {
 
     return rowResults;
   }
+  
+  createUniqueKeys(numberOfKeys: number): Array<number> {
+    if (!this.ids) this._loadIds();
+    
+    const currentIds = this.keysCreated ?
+                        [...this.ids, ...this.keysCreated] :
+                        this.ids
+    const sortedIds = currentIds.sort((idA, idB) => idA - idB)
+    
+    const newKeys = []
+    for (let i=0; i!=numberOfKeys; i++ ){
+      newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i)
+    }
+    
+    if (!this.keysCreated) {
+      this.keysCreated = newKeys
+    } else {
+      this.keysCreated.push(...newKeys)
+    }
+  
+    return newKeys;
+  };
+  
+  addRow(row: Array<any>): void {
+    if (!this.headers) this._loadHeaders();
+    console.log(this.headers, this.headers.length)
+    console.log(row, row.length)
+    if (row.length !== this.headers.length) throw "wrong size of row";
+    if (row[0] != false) throw "id position (index 0) must be falsy (it will be discarded)";
+    row[0] = this.createUniqueKeys(1)[0];
+    this.sheet.appendRow(row);
+  };
+
+  updateValue(idToUpdate: number, headerName: string): void {
+    if (!this.ids) this._loadIds();
+    if (!this.headers) this._loadHeaders();
+
+    const { rowNumber } = this.getRow(id);
+
+    const colIndex = this.headers.indexOf(header);
+    if (colIndex === -1) throw "No such header";
+
+    this.sheet.getRange(rowNumber, colIndex).setValue(value);
+    return { rowUpdated: rowNumber };
+  };
+
+  updateRow(idToUpdate: number, row: Array<any>): void {
+    if (!this.ids) this._loadIds();
+    if (!this.headers) this._loadHeaders();
+
+    const { rowNumber } = this.getRow(row[id]);
+    if (row.length !== this.headers.length) throw "wrong size of row";
+
+    this.sheet.getRange(rowNumber, 1, 1, headers.length).setValues(row);
+  };
+
+  deleteRow(idToDelete: number): void; {
+    // TODO
+  };
 }
