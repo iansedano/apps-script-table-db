@@ -135,6 +135,13 @@ class Table {
     return rowResults;
   }
   
+  _refreshMetaData() {
+    if (this.ids) this._loadIds();
+    if (this.headers) this._loadHeaders();
+    if (this.dataRange) this._loadDataRange();
+    if (this.allValues) this._loadAllValues();
+  }
+  
   createUniqueKeys(numberOfKeys: number): Array<number> {
     if (!this.ids) this._loadIds();
     
@@ -158,13 +165,14 @@ class Table {
   };
   
   addRow(row: Array<any>): void {
-    if (!this.headers) this._loadHeaders();
-    console.log(this.headers, this.headers.length)
-    console.log(row, row.length)
-    if (row.length !== this.headers.length) throw "wrong size of row";
-    if (row[0] != false) throw "id position (index 0) must be falsy (it will be discarded)";
+    if (!this.dataRange) this._loadDataRange();
+    if (row.length > this.numColumns) throw "too many values for number of named columns";
+    if (row[0] != false) throw "id position (index 0) must be falsy (it will be discarded and a new key created)";
     row[0] = this.createUniqueKeys(1)[0];
+    // TODO - type consistency?
     this.sheet.appendRow(row);
+    this._refreshMetaData();
+    return row[0] // returning new ID
   };
 
   updateValue(idToUpdate: number, headerName: string): void {
