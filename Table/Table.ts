@@ -17,16 +17,17 @@ interface ColumnResult {
 }
 
 interface TableInterface {
-  ids: Array<number>;
-  headers: Array<string>;
-  allValues: Array<Array<any>>;
-  numRows: number;
-  numColumns: number;
-  keysCreated: Array<number>;
+  getIds(): Array<number>;
+  getHeaders(): Array<string>;
+  getAllValues(): Array<Array<any>>;
+  getNumRows(): number;
+  getNumColumns(): number;
+  getKeysCreated(): Array<number>;
 
   getColumnByHeader(headerName: string): ColumnResult;
   getRowById(id: number): RowResult;
   getRowsByValue(headerName: string, value: any): Array<RowResult>;
+
   addRow(row: Array<any>): void;
   updateValue(idToUpdate: number, headerName: string, value: any): number;
   updateRow(idToUpdate: number, row: Array<any>): void;
@@ -39,163 +40,56 @@ class Table implements TableInterface {
   protected _sheet: GoogleAppsScript.Spreadsheet.Sheet;
   protected _dataRange: GoogleAppsScript.Spreadsheet.Range;
 
-  ids: Array<number>;
-  headers: Array<string>;
-  numRows: number;
-  numColumns: number;
-  keysCreated: Array<number>;
-  allValues: Array<Array<any>>;
+  protected ids: Array<number>;
+  protected headers: Array<string>;
+  protected numRows: number;
+  protected numColumns: number;
+  protected keysCreated: Array<number>;
+  protected allValues: Array<Array<any>>;
 
   constructor(SS_ID: string, sheetName: string) {
     this._file = SpreadsheetApp.openById(SS_ID);
     this._sheet = this._file.getSheetByName(sheetName);
   }
 
-  private _getRowNumber = TableInternalMethods._getRowNumber;
-  private _refreshMetaData = TableInternalMethods._refreshMetaData;
+  public getIds(): Array<number> {
+    if (!this.ids) this._loadIds();
+    return this.ids;
+  }
+  public getHeaders(): Array<string> {
+    if (!this.headers) this._loadHeaders();
+    return this.headers;
+  }
+  public getAllValues(): Array<Array<any>> {
+    if (!this.allValues) this._loadAllValues();
+    return this.allValues;
+  }
+  public getNumRows(): number {
+    if (!this.numRows) this._loadDataRange();
+    return this.numRows;
+  }
+  public getNumColumns(): number {
+    if (!this.numColumns) this._loadDataRange();
+    return this.numColumns;
+  }
+  public getKeysCreated(): Array<number> {
+    return this.keysCreated;
+  }
 
+  protected _getRowNumber = TableInternalMethods._getRowNumber;
+  protected _refreshMetaData = TableInternalMethods._refreshMetaData;
   protected _loadIds = TableInternalMethods._loadIds;
   protected _loadHeaders = TableInternalMethods._loadHeaders;
   protected _loadDataRange = TableInternalMethods._loadDataRange;
   protected _loadAllValues = TableInternalMethods._loadAllValues;
 
-  getColumnByHeader(headerName: string): ColumnResult {
-    if (!this.headers) this._loadHeaders();
-    if (!this.headers.includes(headerName)) return undefined;
-    if (!this._dataRange) this._loadDataRange();
-    const columnNumber: number = this.headers.indexOf(headerName) + 1;
+  public getColumnByHeader = TableGetMethods.getColumnByHeader;
+  public getRowById = TableGetMethods.getRowById;
+  public getRowsByValue = TableGetMethods.getRowsByValue;
 
-    return {
-      columnNumber,
-      column: this._sheet
-        .getRange(1, columnNumber, this.numRows, 1)
-        .getValues()
-        .flat()
-    };
-  }
-
-  getRowById(searchId: number): RowResult {
-    if (!this.ids) this._loadIds();
-    if (!this._dataRange) this._loadDataRange();
-
-    for (const [index, id] of this.ids.entries()) {
-      if (id === searchId) {
-        // index + 1 because rows begin at 1 not 0
-        const rowNumber = index + 1;
-        const row = this._sheet
-          .getRange(rowNumber, 1, 1, this.numColumns)
-          .getValues()[0];
-        return { rowNumber, row };
-      }
-    }
-
-    return undefined;
-  }
-
-  getRowsByValue(headerName: string, query: any): Array<RowResult> {
-    if (!this.ids) this._loadIds();
-    if (!this.headers) this._loadHeaders();
-    if (!this.headers.includes(headerName)) return undefined;
-    if (!this._dataRange) this._loadDataRange();
-
-    const columnResult = this.getColumnByHeader(headerName);
-
-    const rowResults: Array<RowResult> = columnResult.column.reduce(
-      (
-        output: Array<RowResult>,
-        value: any,
-        index: number,
-        array: any
-      ): Array<RowResult> => {
-        if (value === query) {
-          // index + 1 because rows begin at 1 not 0
-          const rowNumber = index + 1;
-          output.push({
-            rowNumber,
-            row: this._sheet
-              .getRange(rowNumber, 1, 1, this.numColumns)
-              .getValues()[0]
-          });
-        }
-        return output;
-      },
-      []
-    );
-
-    if (rowResults.length === 0) return undefined;
-
-    return rowResults;
-  }
-
-  createUniqueKeys(numberOfKeys: number): Array<number> {
-    if (!this.ids) this._loadIds();
-
-    const currentIds = this.keysCreated
-      ? [...this.ids, ...this.keysCreated]
-      : this.ids;
-    const sortedIds = currentIds.sort((idA, idB) => idA - idB);
-
-    const newKeys = [];
-    for (let i = 0; i != numberOfKeys; i++) {
-      newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i);
-    }
-
-    if (!this.keysCreated) {
-      this.keysCreated = newKeys;
-    } else {
-      this.keysCreated.push(...newKeys);
-    }
-
-    return newKeys;
-  }
-
-  addRow(row: Array<any>): number {
-    if (!this._dataRange) this._loadDataRange();
-    if (row.length > this.numColumns)
-      throw "too many values for number of named columns";
-    if (row[0] != false)
-      throw "id position (index 0) must be falsy (it will be discarded and a new key created)";
-    row[0] = this.createUniqueKeys(1)[0];
-    // TODO - type consistency?
-    this._sheet.appendRow(row);
-    this._refreshMetaData();
-    return row[0]; // returning new ID
-  }
-
-  updateValue(idToUpdate: number, headerName: string, value: any): number {
-    if (!this.ids) this._loadIds();
-    if (!this.headers) this._loadHeaders();
-    if (!this.headers.includes(headerName)) return undefined;
-
-    const rowNumber: number = this._getRowNumber(idToUpdate);
-
-    const colNumber = this.headers.indexOf(headerName) + 1;
-
-    this._sheet.getRange(rowNumber, colNumber).setValue(value);
-    return rowNumber;
-  }
-
-  updateRow(idToUpdate: number, newRowValues: Array<any>): void {
-    if (!this.ids) this._loadIds();
-    if (!this.headers) this._loadHeaders();
-
-    const { rowNumber, row } = this.getRowById(idToUpdate);
-
-    if (row[0] !== newRowValues[0]) throw "IDs don't match";
-    if (row.length > this.headers.length) throw "wrong size of row";
-
-    this._sheet
-      .getRange(rowNumber, 1, 1, newRowValues.length)
-      .setValues([newRowValues]); // must be Array<Array<any>>
-  }
-
-  deleteRow(idToDelete: number): void {
-    if (!this.ids) this._loadIds();
-    if (!this._dataRange) this._loadDataRange();
-
-    const rowNumber: number = this._getRowNumber(idToDelete);
-
-    this._sheet.deleteRow(rowNumber);
-    this._refreshMetaData();
-  }
+  public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
+  public addRow = TableUpdateMethods.addRow;
+  public updateValue = TableUpdateMethods.updateValue;
+  public updateRow = TableUpdateMethods.updateRow;
+  public deleteRow = TableUpdateMethods.deleteRow;
 }

@@ -1,7 +1,7 @@
 function test() {
-  const table = new Table(...TEST_TABLE);
-  console.log(table.getRow(3));
-  console.log(table.getColumn("date"));
+  const table = new Table(...config.TEST_TABLE);
+  console.log(table.getRowById(3));
+  console.log(table.getColumnByHeader("date"));
   console.log(table.getRowsByValue("steps", 1000));
   console.log(table.createUniqueKeys(3));
   console.log(table.createUniqueKeys(1));
