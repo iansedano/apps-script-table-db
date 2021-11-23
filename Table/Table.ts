@@ -16,7 +16,7 @@ interface ColumnResult {
   column: Array<any>;
 }
 
-interface TableInterface {
+interface TableBaseInterface {
   _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
   _sheet: GoogleAppsScript.Spreadsheet.Sheet;
   ids: Array<number>;
@@ -41,7 +41,7 @@ interface TableInterface {
   createUniqueKeys(numberOfKeys: number): Array<number>;
 }
 
-class Table implements TableInterface {
+class TableBase implements TableBaseInterface {
   _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
   _sheet: GoogleAppsScript.Spreadsheet.Sheet;
   ids: Array<number>;
