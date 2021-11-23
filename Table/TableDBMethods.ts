@@ -1,15 +1,9 @@
-namespace TableDBMethods {
-  export function filter(this: TableBase) {
-    this.fdjoaij;
-  }
-}
-
 /**
  * @param {string} tableName
  * @param {array} ids
  */
 function get(tableName, ids) {
-  const table = new TableBase(tableName);
+  const table = new Table(tableName);
   const filteredData = table.data.filter((row) => ids.include(row[0]));
   return {
     headers: table.headers,
@@ -19,7 +13,7 @@ function get(tableName, ids) {
 }
 
 function getAll(tableName) {
-  const table = new TableBase(tableName);
+  const table = new Table(tableName);
   return { headers: table.headers, metadata: table.metadata, data: table.data };
 }
 
@@ -28,7 +22,7 @@ function getAll(tableName) {
  * @param {Object=} body - fields to include, empty
  */
 function insert(tableName, body = {}) {
-  const table = new TableBase(tableName);
+  const table = new Table(tableName);
 
   if (Object.keys(body).length >= table.headers.length) {
     throw "body has too many properties";
@@ -55,12 +49,12 @@ function insert(tableName, body = {}) {
  * @param {string} value
  */
 function updateSingleValue(tableName, id, header, value) {
-  const table = new TableBase(tableName);
+  const table = new Table(tableName);
   table.updateValue(id, header, value);
 }
 
 function updateRow(tableName, id, body) {
-  const table = new TableBase(tableName);
+  const table = new Table(tableName);
 }
 
 function list(tableName, query) {
@@ -75,7 +69,7 @@ function list(tableName, query) {
   }
 
   // TODO - deal with types (make some or most unsupported)
-  const table = new TableBase(tableName);
+  const table = new Table(tableName);
   // TODO - get all values, search for match with all query items
 
   table.data.filter((row) => {

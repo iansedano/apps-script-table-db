@@ -16,21 +16,14 @@ interface ColumnResult {
   column: Array<any>;
 }
 
-interface TableBaseInterface {
-  _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
-  _sheet: GoogleAppsScript.Spreadsheet.Sheet;
+interface TableInterface {
   ids: Array<number>;
   headers: Array<string>;
-  _dataRange: GoogleAppsScript.Spreadsheet.Range;
   allValues: Array<Array<any>>;
   numRows: number;
   numColumns: number;
-  _keysCreated: Array<number>;
+  keysCreated: Array<number>;
 
-  _loadIds(): void;
-  _loadAllValues(): void;
-  _loadHeaders(): void;
-  _getRowNumber(searchId: number): number;
   getColumnByHeader(headerName: string): ColumnResult;
   getRowById(id: number): RowResult;
   getRowsByValue(headerName: string, value: any): Array<RowResult>;
@@ -41,65 +34,30 @@ interface TableBaseInterface {
   createUniqueKeys(numberOfKeys: number): Array<number>;
 }
 
-class TableBase implements TableBaseInterface {
-  _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
-  _sheet: GoogleAppsScript.Spreadsheet.Sheet;
+class Table implements TableInterface {
+  private _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
+  protected _sheet: GoogleAppsScript.Spreadsheet.Sheet;
+  protected _dataRange: GoogleAppsScript.Spreadsheet.Range;
+
   ids: Array<number>;
   headers: Array<string>;
-  _dataRange: GoogleAppsScript.Spreadsheet.Range;
-  allValues: Array<Array<any>>;
   numRows: number;
   numColumns: number;
-  _keysCreated: Array<number>;
+  keysCreated: Array<number>;
+  allValues: Array<Array<any>>;
 
   constructor(SS_ID: string, sheetName: string) {
     this._file = SpreadsheetApp.openById(SS_ID);
     this._sheet = this._file.getSheetByName(sheetName);
   }
 
-  _loadHeaders(): void {
-    if (!this._dataRange) this._loadDataRange();
-    this.headers = this._sheet
-      .getRange(1, 1, 1, this.numColumns)
-      .getValues()[0];
-    if (this.headers[0] !== "id") throw "first column is not id";
-  }
+  private _getRowNumber = TableInternalMethods._getRowNumber;
+  private _refreshMetaData = TableInternalMethods._refreshMetaData;
 
-  _loadIds(): void {
-    this.ids = this._sheet.getRange("A:A").getValues().flat();
-    if (typeof this.ids[1] !== "number") throw "first id is not a number";
-  }
-
-  _loadDataRange(): void {
-    this._dataRange = this._sheet.getDataRange();
-    this.numRows = this._dataRange.getNumRows();
-    this.numColumns = this._dataRange.getNumColumns();
-  }
-
-  _loadAllValues(): void {
-    if (!this._dataRange) this._loadDataRange();
-    this.allValues = this._dataRange.getValues();
-  }
-
-  _getRowNumber(searchId: number): number {
-    if (!this.ids) this._loadIds();
-
-    for (const [index, id] of this.ids.entries()) {
-      if (id === searchId) {
-        // index + 1 because rows begin at 1 not 0
-        const rowNumber = index + 1;
-        return rowNumber;
-      }
-    }
-  }
-
-  _refreshMetaData() {
-    if (this.ids) this._loadIds();
-    // TODO - maybe have a different method for headers?
-    if (this.headers) this._loadHeaders();
-    if (this._dataRange) this._loadDataRange();
-    if (this.allValues) this._loadAllValues();
-  }
+  protected _loadIds = TableInternalMethods._loadIds;
+  protected _loadHeaders = TableInternalMethods._loadHeaders;
+  protected _loadDataRange = TableInternalMethods._loadDataRange;
+  protected _loadAllValues = TableInternalMethods._loadAllValues;
 
   getColumnByHeader(headerName: string): ColumnResult {
     if (!this.headers) this._loadHeaders();
@@ -172,8 +130,8 @@ class TableBase implements TableBaseInterface {
   createUniqueKeys(numberOfKeys: number): Array<number> {
     if (!this.ids) this._loadIds();
 
-    const currentIds = this._keysCreated
-      ? [...this.ids, ...this._keysCreated]
+    const currentIds = this.keysCreated
+      ? [...this.ids, ...this.keysCreated]
       : this.ids;
     const sortedIds = currentIds.sort((idA, idB) => idA - idB);
 
@@ -182,10 +140,10 @@ class TableBase implements TableBaseInterface {
       newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i);
     }
 
-    if (!this._keysCreated) {
-      this._keysCreated = newKeys;
+    if (!this.keysCreated) {
+      this.keysCreated = newKeys;
     } else {
-      this._keysCreated.push(...newKeys);
+      this.keysCreated.push(...newKeys);
     }
 
     return newKeys;
