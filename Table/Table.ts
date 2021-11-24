@@ -6,15 +6,17 @@ values are all done depending on the task at hand.
 
 */
 
-interface RowResult {
+type RowResult = {
   rowNumber: number;
   row: Array<any>;
-}
+};
 
-interface ColumnResult {
+type ColumnResult = {
   columnNumber: number;
   column: Array<any>;
-}
+};
+
+type Filter = {};
 
 interface TableInterface {
   getIds(): Array<number>;
@@ -26,13 +28,18 @@ interface TableInterface {
 
   getColumnByHeader(headerName: string): ColumnResult;
   getRowById(id: number): RowResult;
-  getRowsByValue(headerName: string, value: any): Array<RowResult>;
+  // getRowsByValue(headerName: string, ): Array<RowResult>;
+  getRowsByFilter(query: Filter): Array<RowResult>;
 
   addRow(row: Array<any>): void;
   updateValue(idToUpdate: number, headerName: string, value: any): number;
   updateRow(idToUpdate: number, row: Array<any>): void;
   deleteRow(idToDelete: number): void;
   createUniqueKeys(numberOfKeys: number): Array<number>;
+
+  // checkUniqueKeys();
+  // ensureSortedById();
+  // checkLimits();
 }
 
 class Table implements TableInterface {
@@ -85,7 +92,8 @@ class Table implements TableInterface {
 
   public getColumnByHeader = TableGetMethods.getColumnByHeader;
   public getRowById = TableGetMethods.getRowById;
-  public getRowsByValue = TableGetMethods.getRowsByValue;
+  public getRowsByFilter = TableGetMethods.getRowsByFilter;
+  // public getRowsByValue = TableGetMethods.getRowsByValue;
 
   public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
   public addRow = TableUpdateMethods.addRow;

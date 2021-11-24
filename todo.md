@@ -17,3 +17,4 @@ interact with json instead of arrays...?? ?? ??
 - maintenance
   - sort https://developers.google.com/apps-script/reference/spreadsheet/sheet#sort(Integer)
   - id checking
+  - trimWhitespace()

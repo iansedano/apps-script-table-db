@@ -8,7 +8,8 @@ namespace TableInternalMethods {
   }
 
   export function _loadIds(this: Table): void {
-    this.ids = this._sheet.getRange("A:A").getValues().flat();
+    if (!this._dataRange) this._loadDataRange();
+    this.ids = this._sheet.getRange(1, 1, this.numRows, 1).getValues().flat();
     if (typeof this.ids[1] !== "number") throw "first id is not a number";
   }
 

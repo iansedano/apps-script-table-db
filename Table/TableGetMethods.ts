@@ -6,6 +6,7 @@ namespace TableGetMethods {
     if (!this.headers) this._loadHeaders();
     if (!this.headers.includes(headerName)) return undefined;
     if (!this._dataRange) this._loadDataRange();
+
     const columnNumber: number = this.headers.indexOf(headerName) + 1;
 
     return {
@@ -35,35 +36,104 @@ namespace TableGetMethods {
     return undefined;
   }
 
-  export function getRowsByValue(
+  // export function getRowsByValue(
+  //   this: Table,
+  //   headerName: string,
+  //   value: any
+  // ): Array<RowResult> {
+  //   if (!this.ids) this._loadIds();
+  //   if (!this.headers) this._loadHeaders();
+  //   if (!this.headers.includes(headerName)) return undefined;
+  //   if (!this._dataRange) this._loadDataRange();
+
+  //   const columnResult = this.getColumnByHeader(headerName);
+
+  //   const rowResults: Array<RowResult> = columnResult.column.reduce(
+  //     (
+  //       output: Array<RowResult>,
+  //       value: any,
+  //       index: number,
+  //       array: any
+  //     ): Array<RowResult> => {
+  //       if (value === query) {
+  //         // index + 1 because rows begin at 1 not 0
+  //         const rowNumber = index + 1;
+  //         output.push({
+  //           rowNumber,
+  //           row: this._sheet
+  //             .getRange(rowNumber, 1, 1, this.numColumns)
+  //             .getValues()[0]
+  //         });
+  //       }
+  //       return output;
+  //     },
+  //     []
+  //   );
+
+  //   if (rowResults.length === 0) return undefined;
+
+  //   return rowResults;
+  // }
+
+  type OrderedFilterObject = { headers: string[]; values: any[] };
+
+  export function getRowsByFilter(
     this: Table,
-    headerName: string,
-    query: any
+    filterObject: Filter
   ): Array<RowResult> {
     if (!this.ids) this._loadIds();
     if (!this.headers) this._loadHeaders();
-    if (!this.headers.includes(headerName)) return undefined;
+
     if (!this._dataRange) this._loadDataRange();
 
-    const columnResult = this.getColumnByHeader(headerName);
+    // is this necessary? Limit of number of cells??
 
-    const rowResults: Array<RowResult> = columnResult.column.reduce(
+    let columns: Array<ColumnResult> = [];
+    // TODO - what if someone wants to get certain range of ids...
+    let filter: OrderedFilterObject = { headers: ["id"], values: [null] }; // null can mean "any"
+    for (const header in filterObject) {
+      if (!this.headers.includes(header)) throw `"${header}" not found`;
+      filter.headers.push(header);
+      filter.values.push(filterObject[header]);
+      columns.push(this.getColumnByHeader(header));
+    }
+
+    const valuesToFilter = this.ids.map((id: number, index: number) => {
+      return [
+        id,
+        ...columns.map(
+          (columnResult: ColumnResult) => columnResult.column[index]
+        )
+      ];
+    });
+
+    // https://developers.google.com/apps-script/reference/spreadsheet/sheet#getrangelista1notations
+
+    const rowResults: Array<RowResult> = valuesToFilter.reduce(
       (
         output: Array<RowResult>,
-        value: any,
+        row: Array<any>,
         index: number,
         array: any
       ): Array<RowResult> => {
-        if (value === query) {
-          // index + 1 because rows begin at 1 not 0
-          const rowNumber = index + 1;
-          output.push({
-            rowNumber,
-            row: this._sheet
-              .getRange(rowNumber, 1, 1, this.numColumns)
-              .getValues()[0]
-          });
+        // Going through filter object to see if match
+        // returns unmodified output if not.
+        for (const [index, rowValue] of row.entries()) {
+          const header = filter.headers[index];
+          const filterValue = filter.values[index];
+
+          if (rowValue !== filterValue && filterValue != null) {
+            return output; // does this return to the reduce??
+          }
         }
+        // If here, means that filter matches.
+        const rowNumber = index + 1;
+        output.push({
+          rowNumber,
+          row: this._sheet
+            .getRange(rowNumber, 1, 1, this.numColumns)
+            .getValues()[0]
+        });
         return output;
       },
       []
