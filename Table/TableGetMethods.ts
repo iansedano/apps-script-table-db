@@ -1,6 +1,6 @@
 namespace TableGetMethods {
   export function getColumnByHeader(
-    this: Table,
+    this: _Table,
     headerName: string
   ): ColumnResult {
     if (!this.headers) this._loadHeaders();
@@ -18,7 +18,7 @@ namespace TableGetMethods {
     };
   }
 
-  export function getRowById(this: Table, searchId: number): RowResult {
+  export function getRowById(this: _Table, searchId: number): RowResult {
     if (!this.ids) this._loadIds();
     if (!this._dataRange) this._loadDataRange();
 
@@ -36,10 +36,8 @@ namespace TableGetMethods {
     return undefined;
   }
 
-  type OrderedFilterObject = { headers: string[]; values: any[] };
-
   export function getRowsByFilter(
-    this: Table,
+    this: _Table,
     filterObject: Filter
   ): Array<RowResult> {
     if (!this.ids) this._loadIds();

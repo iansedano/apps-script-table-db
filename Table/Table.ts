@@ -16,7 +16,9 @@ type ColumnResult = {
   column: Array<any>;
 };
 
-type Filter = {};
+type Filter = {}; // key is header and value is value to filter
+type OrderedFilterObject = { headers: string[]; values: any[] };
+type Entry = { id: number };
 
 interface TableInterface {
   getIds(): Array<number>;
@@ -28,7 +30,8 @@ interface TableInterface {
 
   getColumnByHeader(headerName: string): ColumnResult;
   getRowById(id: number): RowResult;
-  getRowsByFilter(query: Filter): Array<RowResult>;
+  getRowsByFilter(filterObject: Filter): Array<RowResult>; // empty obj returns everything
+  getEntriesByFilter(filterObject: Filter): Array<Entry>; // empty obj returns everything
 
   addRow(row: Array<any>): void;
   updateValue(idToUpdate: number, headerName: string, value: any): number;
@@ -41,7 +44,7 @@ interface TableInterface {
   // checkLimits();
 }
 
-class Table implements TableInterface {
+class _Table implements TableInterface {
   private _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
   protected _sheet: GoogleAppsScript.Spreadsheet.Sheet;
   protected _dataRange: GoogleAppsScript.Spreadsheet.Range;
@@ -93,9 +96,13 @@ class Table implements TableInterface {
   public getRowById = TableGetMethods.getRowById;
   public getRowsByFilter = TableGetMethods.getRowsByFilter;
 
+  public getEntriesByFilter = TableEntryMethods.getEntriesByFilter;
+
   public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
   public addRow = TableUpdateMethods.addRow;
   public updateValue = TableUpdateMethods.updateValue;
   public updateRow = TableUpdateMethods.updateRow;
   public deleteRow = TableUpdateMethods.deleteRow;
 }
+
+var Table = _Table;

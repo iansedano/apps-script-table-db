@@ -1,6 +1,6 @@
 namespace TableUpdateMethods {
   export function createUniqueKeys(
-    this: Table,
+    this: _Table,
     numberOfKeys: number
   ): Array<number> {
     if (!this.ids) this._loadIds();
@@ -24,7 +24,7 @@ namespace TableUpdateMethods {
     return newKeys;
   }
 
-  export function addRow(this: Table, row: Array<any>): number {
+  export function addRow(this: _Table, row: Array<any>): number {
     if (!this._dataRange) this._loadDataRange();
     if (row.length > this.numColumns)
       throw "too many values for number of named columns";
@@ -39,7 +39,7 @@ namespace TableUpdateMethods {
   }
 
   export function updateValue(
-    this: Table,
+    this: _Table,
     idToUpdate: number,
     headerName: string,
     value: any
@@ -57,7 +57,7 @@ namespace TableUpdateMethods {
   }
 
   export function updateRow(
-    this: Table,
+    this: _Table,
     idToUpdate: number,
     newRowValues: Array<any>
   ): void {
@@ -74,7 +74,7 @@ namespace TableUpdateMethods {
       .setValues([newRowValues]); // must be Array<Array<any>>
   }
 
-  export function deleteRow(this: Table, idToDelete: number): void {
+  export function deleteRow(this: _Table, idToDelete: number): void {
     if (!this.ids) this._loadIds();
     if (!this._dataRange) this._loadDataRange();
 
