@@ -37,10 +37,9 @@ namespace TableInternalMethods {
   }
 
   export function _refreshMetaData(this: Table) {
-    if (this.ids) this._loadIds();
-    // TODO - maybe have a different method for headers?
+    if (this._dataRange) this._loadDataRange(); // Needs to be first
     if (this.headers) this._loadHeaders();
-    if (this._dataRange) this._loadDataRange();
+    if (this.ids) this._loadIds();
     if (this.allValues) this._loadAllValues();
   }
 }

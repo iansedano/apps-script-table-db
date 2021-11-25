@@ -28,7 +28,6 @@ interface TableInterface {
 
   getColumnByHeader(headerName: string): ColumnResult;
   getRowById(id: number): RowResult;
-  // getRowsByValue(headerName: string, ): Array<RowResult>;
   getRowsByFilter(query: Filter): Array<RowResult>;
 
   addRow(row: Array<any>): void;
@@ -93,7 +92,6 @@ class Table implements TableInterface {
   public getColumnByHeader = TableGetMethods.getColumnByHeader;
   public getRowById = TableGetMethods.getRowById;
   public getRowsByFilter = TableGetMethods.getRowsByFilter;
-  // public getRowsByValue = TableGetMethods.getRowsByValue;
 
   public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
   public addRow = TableUpdateMethods.addRow;

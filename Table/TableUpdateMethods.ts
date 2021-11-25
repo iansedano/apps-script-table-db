@@ -34,6 +34,7 @@ namespace TableUpdateMethods {
     // TODO - type consistency?
     this._sheet.appendRow(row);
     this._refreshMetaData();
+    SpreadsheetApp.flush();
     return row[0]; // returning new ID
   }
 

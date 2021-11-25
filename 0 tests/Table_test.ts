@@ -12,6 +12,7 @@ function test() {
   console.log("ADDING ROWS");
   table.addRow(["", "5/6/2021", "2021", "5", "14", "2000", "1", 1, 2, 4]);
   table.addRow(["", "5/6/2021", "2021", "5", "14", "5000", "1", 1, 2, 4]);
+  console.log("finished adding rows");
   // console.log(table.getRowsByValue("steps", 5000));
   console.log(table.getRowsByFilter({ steps: 5000 }));
 
