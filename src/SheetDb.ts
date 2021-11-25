@@ -3,6 +3,16 @@ class _SheetDb {
 
   constructor(SS_ID: string) {
     this.SS_ID = SS_ID;
+
+    return new Proxy(this, {
+      get: function (target, prop: string) {
+        if (!target[prop]) {
+          target.loadTable(prop);
+        }
+
+        return target[prop];
+      }
+    });
   }
 
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
@@ -14,17 +24,4 @@ class _SheetDb {
   }
 }
 
-const SheetDbHandler = {
-  get: function (target, prop) {
-    if (!target[prop]) {
-      target.loadTable(prop);
-    }
-
-    return target[prop];
-  }
-};
-
-function SheetDb(SS_ID: string) {
-  const sheetDb = new _SheetDb(SS_ID);
-  return new Proxy(sheetDb, SheetDbHandler);
-}
+var SheetDb = _SheetDb;
