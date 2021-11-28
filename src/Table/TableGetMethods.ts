@@ -40,27 +40,33 @@ namespace TableGetMethods {
     this: _Table,
     filterObject: Filter
   ): Array<RowResult> {
+    // TODO - what if someone wants to get certain range of ids...
+
+    // Initial checks to ensure necessary data is loaded
     if (!this.ids) this._loadIds();
     if (!this.headers) this._loadHeaders();
-
     if (!this._dataRange) this._loadDataRange();
+    // TODO - Limit of number of cells??
 
-    // is this necessary? Limit of number of cells??
-
-    let columns: Array<ColumnResult> = [];
-    // TODO - what if someone wants to get certain range of ids...
+    // Initializing columns to be searched, array of columns with all values in column
+    let columnResults: Array<ColumnResult> = [];
+    // Initializing transformation of the filterObject into arrays to be iterated over
     let filter: OrderedFilterObject = { headers: ["id"], values: [null] }; // null can mean "any"
+
+    // For each header
+    // Could be optimized by getting adjacent columns in one call
     for (const header in filterObject) {
       if (!this.headers.includes(header)) throw `"${header}" not found`;
       filter.headers.push(header);
       filter.values.push(filterObject[header]);
-      columns.push(this.getColumnByHeader(header));
+      columnResults.push(this.getColumnByHeader(header));
     }
 
+    // Creating intermediate value array with ids and the values that are being filtered
     const valuesToFilter = this.ids.map((id: number, index: number) => {
       return [
         id,
-        ...columns.map(
+        ...columnResults.map(
           (columnResult: ColumnResult) => columnResult.column[index]
         )
       ];
@@ -68,6 +74,7 @@ namespace TableGetMethods {
 
     // https://developers.google.com/apps-script/reference/spreadsheet/sheet#getrangelista1notations
 
+    // Using intermediate array, valuesToFilter to return an array of RowResults
     const rowResults: Array<RowResult> = valuesToFilter.reduce(
       (
         output: Array<RowResult>,
@@ -98,7 +105,7 @@ namespace TableGetMethods {
       []
     );
 
-    if (rowResults.length === 0) return undefined;
+    if (rowResults.length === 0) console.log("no results");
 
     return rowResults;
   }

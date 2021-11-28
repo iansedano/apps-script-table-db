@@ -1,6 +1,7 @@
 namespace TableEntryMethods {
   export function getEntriesByFilter(this: _Table, filter: Filter) {
     const rowResults = this.getRowsByFilter(filter);
+    if (rowResults.length === 0) return [];
 
     const entries: Array<Entry> = rowResults.map((rowResult) => {
       // Assuming headers are already loaded...
