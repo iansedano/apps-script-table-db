@@ -1,9 +1,12 @@
 class _SheetDb {
   SS_ID: string;
+  file: GoogleAppsScript.Spreadsheet.Spreadsheet
 
   constructor(SS_ID: string) {
     this.SS_ID = SS_ID;
-
+    this.file = SpreadsheetApp.openById(SS_ID)
+    
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
     return new Proxy(this, {
       get: function (target, prop: string) {
         if (!target[prop]) {
@@ -15,12 +18,31 @@ class _SheetDb {
     });
   }
 
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+  
 
   loadTable(name: string) {
     if (!this[name]) {
       this[name] = new Table(this.SS_ID, name);
     }
+  }
+  
+  createTable(name: string) {
+    if (!this[name]) {
+      
+      let sheet = this.file.getSheets().find((sheet) => {
+        if (sheet.getName() === name) {
+          return true;
+        } else return false;
+      });
+      if (!sheet) {
+        sheet = this.file.insertSheet(name);
+      } else {
+        throw "sheet with this name already exists!"
+      }
+    }
+    
+    this[name] = new Table(this.SS_ID, name);
+    
   }
 }
 
