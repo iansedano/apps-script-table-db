@@ -23,10 +23,12 @@ class _SheetDb {
   loadTable(name: string) {
     if (!this[name]) {
       this[name] = new Table(this.SS_ID, name);
+    } else {
+      return null
     }
   }
   
-  createTable(name: string) {
+  createTable(name: string, headers: Array<string>) {
     if (!this[name]) {
       
       let sheet = this.file.getSheets().find((sheet) => {
@@ -36,14 +38,16 @@ class _SheetDb {
       });
       if (!sheet) {
         sheet = this.file.insertSheet(name);
+        sheet.appendRow(["id", ...headers])
       } else {
         throw "sheet with this name already exists!"
       }
     }
     
     this[name] = new Table(this.SS_ID, name);
-    
   }
+  
+  
 }
 
 var SheetDb = _SheetDb;
