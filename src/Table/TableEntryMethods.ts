@@ -17,4 +17,9 @@ namespace TableEntryMethods {
 
     return entries;
   }
+  
+  export function addEntry(this: _Table, entry: Entry) {
+    const row = this.headers.map((header) => entry[header])
+    this.addRow(row)
+  }
 }
