@@ -23,24 +23,17 @@ type Entry = { id?: number };
 interface TableInterface {
   getIds(): Array<number>;
   getHeaders(): Array<string>;
-  getAllValues(): Array<Array<any>>;
-  getNumRows(): number;
-  getNumColumns(): number;
-  getKeysCreated(): Array<number>;
 
-  getColumnByHeader(headerName: string): ColumnResult;
-  getRowById(id: number): RowResult;
-  getRowsByFilter(filterObject: Filter): Array<RowResult>; // empty obj returns everything
   getEntries(filterObject: Filter): Array<Entry>; // empty obj returns everything
 
   addEntry(entry: Entry): void;
-  addRow(row: Array<any>): void;
+
   updateValue(idToUpdate: number, headerName: string, value: any): number;
   updateRow(idToUpdate: number, row: Array<any>): void;
   deleteRow(idToDelete: number): void;
   createUniqueKeys(numberOfKeys: number): Array<number>;
 
-  clearTable(): void;
+  clearEntries(): void;
 
   // checkUniqueKeys();
   // ensureSortedById();
@@ -48,51 +41,42 @@ interface TableInterface {
 }
 
 class Table implements TableInterface {
-  private _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
   protected _sheet: GoogleAppsScript.Spreadsheet.Sheet;
-  protected _dataRange: GoogleAppsScript.Spreadsheet.Range;
+  protected _dataRange: GoogleAppsScript.Spreadsheet.Range; // All data including headers
+  protected _entryRange: GoogleAppsScript.Spreadsheet.Range; // All data excluding headers
 
-  protected ids: Array<number>;
-  protected headers: Array<string>;
+  protected _ids: Array<number>;
+  protected _headers: Array<string>;
+  protected _entries: Array<Array<any>>;
   protected numRows: number;
   protected numColumns: number;
   protected keysCreated: Array<number>;
-  protected allValues: Array<Array<any>>;
+  protected _values: Array<Array<any>>;
 
   constructor(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
     this._sheet = sheet;
+    this._loadData();
   }
 
   public getIds(): Array<number> {
-    if (!this.ids) this._loadIds();
-    return this.ids;
+    return this._ids;
   }
   public getHeaders(): Array<string> {
-    if (!this.headers) this._loadHeaders();
-    return this.headers;
+    return this._headers;
   }
-  public getAllValues(): Array<Array<any>> {
-    if (!this.allValues) this._loadAllValues();
-    return this.allValues;
-  }
-  public getNumRows(): number {
-    if (!this.numRows) this._loadDataRange();
-    return this.numRows;
-  }
-  public getNumColumns(): number {
-    if (!this.numColumns) this._loadDataRange();
-    return this.numColumns;
-  }
-  public getKeysCreated(): Array<number> {
-    return this.keysCreated;
+  public clearEntries(): void {
+    this._loadData();
+    this._entryRange.clear();
   }
 
+  protected _update = () => {
+    SpreadsheetApp.flush();
+    // Utilities.sleep(1000)
+    this._loadData();
+  };
+
   protected _getRowNumber = TableInternalMethods._getRowNumber;
-  protected _refreshMetaData = TableInternalMethods._refreshMetaData;
-  protected _loadIds = TableInternalMethods._loadIds;
-  protected _loadHeaders = TableInternalMethods._loadHeaders;
-  protected _loadDataRange = TableInternalMethods._loadDataRange;
-  protected _loadAllValues = TableInternalMethods._loadAllValues;
+  protected _loadData = TableInternalMethods._loadData;
 
   public getColumnByHeader = TableGetMethods.getColumnByHeader;
   public getRowById = TableGetMethods.getRowById;

@@ -8,7 +8,7 @@ namespace TableEntryMethods {
       // Assuming headers are already loaded...
       return rowResult.row.reduce(
         (output: Entry, value: any, index: number) => {
-          const header = this.headers[index];
+          const header = this._headers[index];
           output[header] = value;
           return output;
         },
@@ -20,8 +20,9 @@ namespace TableEntryMethods {
   }
 
   export function addEntry(this: Table, entry: Entry): void {
-    const row = this.headers.map((header) => entry[header]);
+    const row = this._headers.map((header) => entry[header]);
     console.log(row);
     this.addRow(row);
+    SpreadsheetApp.flush();
   }
 }

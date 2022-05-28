@@ -3,11 +3,10 @@ namespace TableGetMethods {
     this: Table,
     headerName: string
   ): ColumnResult {
-    if (!this.headers) this._loadHeaders();
-    if (!this.headers.includes(headerName)) return undefined;
-    if (!this._dataRange) this._loadDataRange();
+    if (!this._headers.includes(headerName)) return undefined;
+    if (!this._dataRange) this._loadData();
 
-    const columnNumber: number = this.headers.indexOf(headerName) + 1;
+    const columnNumber: number = this._headers.indexOf(headerName) + 1;
 
     return {
       columnNumber,
@@ -19,10 +18,7 @@ namespace TableGetMethods {
   }
 
   export function getRowById(this: Table, searchId: number): RowResult {
-    if (!this.ids) this._loadIds();
-    if (!this._dataRange) this._loadDataRange();
-
-    for (const [index, id] of this.ids.entries()) {
+    for (const [index, id] of this._ids.entries()) {
       if (id === searchId) {
         // index + 1 because rows begin at 1 not 0
         const rowNumber = index + 1;
@@ -41,11 +37,6 @@ namespace TableGetMethods {
     filterObject: Filter
   ): Array<RowResult> {
     // TODO - what if someone wants to get certain range of ids...
-
-    // Initial checks to ensure necessary data is loaded
-    if (!this.ids) this._loadIds();
-    if (!this.headers) this._loadHeaders();
-    if (!this._dataRange) this._loadDataRange();
     // TODO - Limit of number of cells??
 
     // Initializing columns to be searched, array of columns with all values in column
@@ -56,14 +47,14 @@ namespace TableGetMethods {
     // For each header
     // Could be optimized by getting adjacent columns in one call
     for (const header in filterObject) {
-      if (!this.headers.includes(header)) throw `"${header}" not found`;
+      if (!this._headers.includes(header)) throw `"${header}" not found`;
       filter.headers.push(header);
       filter.values.push(filterObject[header]);
       columnResults.push(this.getColumnByHeader(header));
     }
 
     // Creating intermediate value array with ids and the values that are being filtered
-    const valuesToFilter = this.ids.map((id: number, index: number) => {
+    const valuesToFilter = this._ids.map((id: number, index: number) => {
       return [
         id,
         ...columnResults.map(
