@@ -57,9 +57,8 @@ class _Table implements TableInterface {
   protected keysCreated: Array<number>;
   protected allValues: Array<Array<any>>;
 
-  constructor(SS_ID: string, sheetName: string) {
-    this._file = SpreadsheetApp.openById(SS_ID);
-    this._sheet = this._file.getSheetByName(sheetName);
+  constructor(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    this._sheet = sheet;
   }
 
   public getIds(): Array<number> {
