@@ -1,7 +1,7 @@
 {
-  "name": "apps_script_sheet_db",
+  "name": "apps-script-table-db",
   "version": "1.0.0",
-  "description": "All columns except for date index should be string formatted.",
+  "description": "An Apps Script library and pattern for simple persistent storage in Google Sheets.",
   "main": "\"\"",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,9 +13,9 @@
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/iansedano/apps_script_sheet_db/issues"
+    "url": "https://github.com/iansedano/apps-script-table-db/issues"
   },
-  "homepage": "https://github.com/iansedano/apps_script_sheet_db#readme",
+  "homepage": "https://github.com/iansedano/apps-script-table-db#readme",
   "dependencies": {
     "@types/google-apps-script": "^1.0.41"
   }

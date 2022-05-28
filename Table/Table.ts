@@ -18,7 +18,7 @@ type ColumnResult = {
 
 type Filter = {}; // key is header and value is value to filter
 type OrderedFilterObject = { headers: string[]; values: any[] };
-type Entry = { id: number };
+type Entry = { id?: number };
 
 interface TableInterface {
   getIds(): Array<number>;
@@ -31,8 +31,9 @@ interface TableInterface {
   getColumnByHeader(headerName: string): ColumnResult;
   getRowById(id: number): RowResult;
   getRowsByFilter(filterObject: Filter): Array<RowResult>; // empty obj returns everything
-  getEntriesByFilter(filterObject: Filter): Array<Entry>; // empty obj returns everything
+  getEntries(filterObject: Filter): Array<Entry>; // empty obj returns everything
 
+  addEntry(entry: Entry): void;
   addRow(row: Array<any>): void;
   updateValue(idToUpdate: number, headerName: string, value: any): number;
   updateRow(idToUpdate: number, row: Array<any>): void;
@@ -96,7 +97,8 @@ class _Table implements TableInterface {
   public getRowById = TableGetMethods.getRowById;
   public getRowsByFilter = TableGetMethods.getRowsByFilter;
 
-  public getEntriesByFilter = TableEntryMethods.getEntriesByFilter;
+  public getEntries = TableEntryMethods.getEntries;
+  public addEntry = TableEntryMethods.addEntry;
 
   public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
   public addRow = TableUpdateMethods.addRow;
