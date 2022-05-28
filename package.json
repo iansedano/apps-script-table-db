@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iansedano/apps_script_sheet_db.git"
+    "url": "git+https://github.com/iansedano/apps-script-table-db.git"
   },
   "author": "",
   "license": "ISC",
