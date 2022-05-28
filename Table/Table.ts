@@ -40,12 +40,14 @@ interface TableInterface {
   deleteRow(idToDelete: number): void;
   createUniqueKeys(numberOfKeys: number): Array<number>;
 
+  clearTable(): void;
+
   // checkUniqueKeys();
   // ensureSortedById();
   // checkLimits();
 }
 
-class _Table implements TableInterface {
+class Table implements TableInterface {
   private _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
   protected _sheet: GoogleAppsScript.Spreadsheet.Sheet;
   protected _dataRange: GoogleAppsScript.Spreadsheet.Range;
@@ -105,5 +107,3 @@ class _Table implements TableInterface {
   public updateRow = TableUpdateMethods.updateRow;
   public deleteRow = TableUpdateMethods.deleteRow;
 }
-
-var Table = _Table;

@@ -2,7 +2,7 @@ function setDateToMidnight(inputDate, nextDay) {
   const [year, month, date] = [
     inputDate.getFullYear(),
     inputDate.getMonth(),
-    inputDate.getDate()
+    inputDate.getDate(),
   ];
 
   if (nextDay === false) {
@@ -16,13 +16,13 @@ function YMDMatch(dateA, dateB) {
   const [yearA, monthA, dayOfMonthA] = [
     dateA.getFullYear(),
     dateA.getMonth(),
-    dateA.getDate()
+    dateA.getDate(),
   ];
 
   const [yearB, monthB, dayOfMonthB] = [
     dateB.getFullYear(),
     dateB.getMonth(),
-    dateB.getDate()
+    dateB.getDate(),
   ];
 
   if (yearA === yearB && monthA === monthB && dayOfMonthA === dayOfMonthB)
@@ -58,7 +58,7 @@ function getWeekBoundaries(givenDate) {
     4: [-3, 3],
     5: [-4, 2],
     6: [-5, 1],
-    0: [-6, 0]
+    0: [-6, 0],
   };
 
   const startingDay = givenDate.getDay();
@@ -94,7 +94,7 @@ function getMidnight(inputDate) {
   const [year, month, date] = [
     inputDate.getFullYear(),
     inputDate.getMonth(),
-    inputDate.getDate()
+    inputDate.getDate(),
   ];
   return new Date(year, month, date);
 }
@@ -107,7 +107,7 @@ function setDateToMidnight(inputDate, nextDay) {
   const [year, month, date] = [
     inputDate.getFullYear(),
     inputDate.getMonth(),
-    inputDate.getDate()
+    inputDate.getDate(),
   ];
 
   if (nextDay === false) {
@@ -123,13 +123,13 @@ function yearMonthDateMatch(dateA, dateB) {
   const [yearA, monthA, dayOfMonthA] = [
     dateA.getFullYear(),
     dateA.getMonth(),
-    dateA.getDate()
+    dateA.getDate(),
   ];
 
   const [yearB, monthB, dayOfMonthB] = [
     dateB.getFullYear(),
     dateB.getMonth(),
-    dateB.getDate()
+    dateB.getDate(),
   ];
 
   if (yearA === yearB && monthA === monthB && dayOfMonthA === dayOfMonthB)

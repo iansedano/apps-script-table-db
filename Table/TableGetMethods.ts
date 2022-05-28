@@ -1,6 +1,6 @@
 namespace TableGetMethods {
   export function getColumnByHeader(
-    this: _Table,
+    this: Table,
     headerName: string
   ): ColumnResult {
     if (!this.headers) this._loadHeaders();
@@ -18,7 +18,7 @@ namespace TableGetMethods {
     };
   }
 
-  export function getRowById(this: _Table, searchId: number): RowResult {
+  export function getRowById(this: Table, searchId: number): RowResult {
     if (!this.ids) this._loadIds();
     if (!this._dataRange) this._loadDataRange();
 
@@ -37,7 +37,7 @@ namespace TableGetMethods {
   }
 
   export function getRowsByFilter(
-    this: _Table,
+    this: Table,
     filterObject: Filter
   ): Array<RowResult> {
     // TODO - what if someone wants to get certain range of ids...
