@@ -1,12 +1,12 @@
 namespace TableEntryMethods {
-  export function getEntries(this: Table, filter: Filter = null) {
+  export function getEntries(this: Table, filter: Object = null) {
     const rowResults = this.getRowsByFilter(filter || {});
     if (rowResults.length === 0) return [];
-    if (rowResults[0].row[0] == "id") throw "header values are being returned";
+    if (rowResults[0][0] == "id") throw "header values are being returned";
 
-    const entries: Array<Entry> = rowResults.map((rowResult) => {
+    const entries: Array<Entry> = rowResults.map((row) => {
       // Assuming headers are already loaded...
-      return rowResult.row.reduce(
+      return row.reduce(
         (output: Entry, value: any, index: number) => {
           const header = this._headers[index];
           output[header] = value;

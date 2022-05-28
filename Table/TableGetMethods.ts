@@ -2,19 +2,12 @@ namespace TableGetMethods {
   export function getColumnByHeader(
     this: Table,
     headerName: string
-  ): ColumnResult {
+  ): Array<any> {
     if (!this._headers.includes(headerName)) return undefined;
-    if (!this._dataRange) this._loadData();
 
-    const columnNumber: number = this._headers.indexOf(headerName) + 1;
+    const columnIndex: number = this._headers.indexOf(headerName);
 
-    return {
-      columnNumber,
-      column: this._sheet
-        .getRange(2, columnNumber, this.numRows, 1)
-        .getValues()
-        .flat(),
-    };
+    return this._entries.map((entry) => entry[columnIndex]).flat();
   }
 
   export function getRowById(this: Table, searchId: number): RowResult {
@@ -32,65 +25,44 @@ namespace TableGetMethods {
     return undefined;
   }
 
+  export function addIndicesToFilterObject(this: Table, filter: Object) {
+    return Object.entries(filter).reduce(
+      (acc: Object, [header, value]: [string, any]): Object => {
+        if (!this._headers.includes(header)) throw `"${header}" not found`;
+        acc[header] = {
+          index: this._headers.indexOf(header),
+          value: value,
+        };
+        return acc;
+      },
+      {}
+    );
+  }
+
   export function getRowsByFilter(
     this: Table,
-    filterObject: Filter
-  ): Array<RowResult> {
+    filterObject: Object
+  ): Array<Array<any>> {
     // TODO - what if someone wants to get certain range of ids...
     // TODO - Limit of number of cells??
 
-    // Initializing columns to be searched, array of columns with all values in column
-    let columnResults: Array<ColumnResult> = [];
-    // Initializing transformation of the filterObject into arrays to be iterated over
-    let filter: OrderedFilterObject = { headers: ["id"], values: [null] }; // null can mean "any"
+    const filter = this._addIndicesToFilterObject(filterObject);
 
-    // For each header
-    // Could be optimized by getting adjacent columns in one call
-    for (const header in filterObject) {
-      if (!this._headers.includes(header)) throw `"${header}" not found`;
-      filter.headers.push(header);
-      filter.values.push(filterObject[header]);
-      columnResults.push(this.getColumnByHeader(header));
-    }
-
-    // Creating intermediate value array with ids and the values that are being filtered
-    const valuesToFilter = this._ids.map((id: number, index: number) => {
-      return [
-        id,
-        ...columnResults.map(
-          (columnResult: ColumnResult) => columnResult.column[index]
-        ),
-      ];
-    });
-
-    // https://developers.google.com/apps-script/reference/spreadsheet/sheet#getrangelista1notations
-
-    // Using intermediate array, valuesToFilter to return an array of RowResults
-    // TODO - this gets each row individually from sheet, doesn't filter in memory
-    const rowResults: Array<RowResult> = valuesToFilter.reduce(
-      (
-        output: Array<RowResult>,
-        row: Array<any>,
-        index: number,
-        array: any
-      ): Array<RowResult> => {
+    const rowResults: Array<Array<any>> = this._entries.reduce(
+      (output: Array<any>, row: Array<any>, index: number): Array<any> => {
         // Going through filter object to see if match
         // returns unmodified output if not.
-        for (const [index, rowValue] of row.entries()) {
-          const filterValue = filter.values[index];
 
-          if (rowValue != filterValue && filterValue != null) {
-            return output;
-          }
+        if (
+          Object.entries(filter).every(
+            ([header, { headerIndex, value }]): boolean => {
+              if (row[headerIndex] == value) return true;
+              return false;
+            }
+          )
+        ) {
+          output.push(row);
         }
-        // If here, means that filter matches.
-        const rowNumber = index + 2;
-        output.push({
-          rowNumber,
-          row: this._sheet
-            .getRange(rowNumber, 1, 1, this.numColumns)
-            .getValues()[0],
-        });
         return output;
       },
       []

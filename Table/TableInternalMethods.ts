@@ -30,7 +30,7 @@ namespace TableInternalMethods {
     } else throw "0 rows? Headers must be present";
   }
 
-  export function _getRowNumber(this: Table, searchId: number): number {
+  export function _getIdRowNumber(this: Table, searchId: number): number {
     for (const [index, id] of this._ids.entries()) {
       if (id === searchId) {
         // index + 1 because rows begin at 1 not 0
