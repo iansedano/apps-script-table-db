@@ -171,7 +171,6 @@ class Table implements TableInterface {
     if (!this.headers.includes(headerName)) throw "No such header";
 
     const columnIndex: number = this.headers.indexOf(headerName);
-
     return this.entries.map((entry) => entry[columnIndex]).flat();
   }
 
