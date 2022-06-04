@@ -22,7 +22,7 @@ type Filter = { [key: string]: any };
 type IndexedFilter = { [key: string]: { headerColIndex: number; value: any } };
 
 interface TableInterface {
-  get(filterObject: Object): Array<Entry>; // empty obj returns everything
+  getEntries(filterObject: Object): Array<Entry>; // empty obj returns everything
   addEntry(entry: Entry): void;
   updateValue(idToUpdate: number, headerName: string, value: any): number;
   createUniqueKeys(numberOfKeys: number): Array<number>;
@@ -41,15 +41,14 @@ class Table implements TableInterface {
   protected sheet: GoogleAppsScript.Spreadsheet.Sheet;
   protected dataRange: GoogleAppsScript.Spreadsheet.Range; // All data including headers
   protected entryRange: GoogleAppsScript.Spreadsheet.Range; // All data excluding headers
-
-  protected ids: Array<number>;
-  protected headers: Array<string>;
-  protected entries: Array<Array<any>>;
+  protected ids: number[];
+  protected headers: string[];
+  protected entries: any[][];
   protected numRows: number;
   protected numColumns: number;
-  protected keysCreated: Array<number>;
-  protected allValues: Array<Array<any>>;
-  protected entryValues: Array<Array<any>>;
+  protected keysCreated: number[];
+  protected allValues: any[][];
+  protected entryValues: any[][];
 
   constructor(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
     this.sheet = sheet;
@@ -57,7 +56,7 @@ class Table implements TableInterface {
   }
 
   public clearEntries(): void {
-    // this._loadData(); // Probably not needed but might be good to have as failsafe
+    this.load(); // Probably not needed but might be good to have as failsafe
     this.entryRange.clear();
   }
 
@@ -78,23 +77,24 @@ class Table implements TableInterface {
       this.entryRange = null;
       this.entries = [];
       this.ids = [];
-    } else if (this.numRows > 1) {
-      this.entryRange = this.sheet.getRange(
-        2,
-        1,
-        this.numRows - 1,
-        this.numColumns
-      );
-      this.entries = this.allValues.slice(1, -1);
-
-      this.ids = this.entries
-        .map((entry) => {
-          if (typeof entry[0] !== "number")
-            throw `All IDs must be numbers, ${entry[0]} is not a number`;
-          return entry[0];
-        })
-        .flat();
+      return;
     }
+
+    this.entryRange = this.sheet.getRange(
+      2,
+      1,
+      this.numRows - 1,
+      this.numColumns
+    );
+    this.entries = this.allValues.slice(1, -1);
+
+    this.ids = this.entries
+      .map((entry) => {
+        if (typeof entry[0] !== "number")
+          throw `All IDs must be numbers, ${entry[0]} is not a number`;
+        return entry[0];
+      })
+      .flat();
   }
 
   protected update = () => {
@@ -104,13 +104,8 @@ class Table implements TableInterface {
   };
 
   protected getIdRowNumber(searchId: number): number {
-    for (const [index, id] of this.ids.entries()) {
-      if (id === searchId) {
-        // index + 1 because rows begin at 1 not 0
-        const rowNumber = index + 1;
-        return rowNumber;
-      }
-    }
+    // index + 2 because rows begin at 1 not 0, and header row not included in ids
+    return this.ids.findIndex((id) => id == searchId) + 2;
   }
 
   protected convertFilterToIndexed(this: Table, filter: Filter): IndexedFilter {
@@ -127,7 +122,7 @@ class Table implements TableInterface {
     );
   }
 
-  protected getRowsByFilter(filterObject: Filter): any[][] {
+  protected getRows(filterObject: Filter): any[][] {
     const filter = this.convertFilterToIndexed(filterObject);
 
     const rowResults: any[][] = this.entries.reduce(
@@ -152,34 +147,48 @@ class Table implements TableInterface {
     return rowResults;
   }
 
-  public get(filter: Object = null) {
-    const rowResults = this.getRowsByFilter(filter || {});
+  public getEntries(filter: Object = null): Entry[] {
+    const rowResults = this.getRows(filter || {});
     if (rowResults.length === 0) return [];
     if (rowResults[0][0] == "id") throw "header values are being returned";
 
-    const entries: Array<Entry> = rowResults.map((row) => {
-      // Assuming headers are already loaded...
-      return row.reduce(
-        (output: Entry, value: any, index: number) => {
-          const header = this.headers[index];
-          output[header] = value;
-          return output;
-        },
-        {} // output init
-      );
+    return rowResults.map((row): Entry => {
+      return row.reduce((output: Entry, value: any, index: number): Entry => {
+        const header = this.headers[index];
+        output[header] = value;
+        return output;
+      }, {});
     });
-
-    return entries;
   }
 
   public addEntry(entry: Entry): void {
     const row = this.headers.map((header) => entry[header]);
     this.addRow(row);
-    SpreadsheetApp.flush();
+    this.update();
   }
 
-  public getColumnByHeader = TableGetMethods.getColumnByHeader;
-  public getRowById = TableGetMethods.getRowById;
+  protected getColumnByHeader(headerName: string): any[] {
+    if (!this.headers.includes(headerName)) throw "No such header";
+
+    const columnIndex: number = this.headers.indexOf(headerName);
+
+    return this.entries.map((entry) => entry[columnIndex]).flat();
+  }
+
+  protected getRowById(searchId: number): any[] {
+    for (const [index, id] of this.ids.entries()) {
+      if (id === searchId) {
+        // index + 1 because rows begin at 1 not 0
+        const rowNumber = index + 1;
+        const row = this.sheet
+          .getRange(rowNumber, 1, 1, this.numColumns)
+          .getValues()[0];
+        return { rowNumber, row };
+      }
+    }
+
+    return undefined;
+  }
 
   public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
   public addRow = TableUpdateMethods.addRow;
