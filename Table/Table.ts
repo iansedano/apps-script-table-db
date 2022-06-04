@@ -1,27 +1,30 @@
+// TODO - remove
 type RowResult = {
   rowNumber: number;
   row: Array<any>;
 };
 
-type ColumnResult = {
-  columnNumber: number;
-  column: Array<any>;
-};
-
-type OrderedFilterObject = { headers: string[]; values: any[] };
+/**
+ * Object representing a row, with each key is a header name, and the value
+ * is the row value
+ */
 type Entry = { id?: number };
 
+/**
+ * Object where key represents header and the value is the filter value
+ * for that header.
+ */
+type Filter = { [key: string]: any };
+
+/**
+ * Extension of the {@link Filter} type that includes the column index of the header name
+ */
+type IndexedFilter = { [key: string]: { headerColIndex: number; value: any } };
+
 interface TableInterface {
-  getIds(): Array<number>;
-  getHeaders(): Array<string>;
-
-  getEntries(filterObject: Object): Array<Entry>; // empty obj returns everything
-
+  get(filterObject: Object): Array<Entry>; // empty obj returns everything
   addEntry(entry: Entry): void;
-
   updateValue(idToUpdate: number, headerName: string, value: any): number;
-  updateRow(idToUpdate: number, row: Array<any>): void;
-  deleteRow(idToDelete: number): void;
   createUniqueKeys(numberOfKeys: number): Array<number>;
 
   clearEntries(): void;
@@ -31,74 +34,77 @@ interface TableInterface {
   // checkLimits();
 }
 
+/**
+ * Base class for table-db library
+ */
 class Table implements TableInterface {
-  protected _sheet: GoogleAppsScript.Spreadsheet.Sheet;
-  protected _dataRange: GoogleAppsScript.Spreadsheet.Range; // All data including headers
-  protected _entryRange: GoogleAppsScript.Spreadsheet.Range; // All data excluding headers
+  protected sheet: GoogleAppsScript.Spreadsheet.Sheet;
+  protected dataRange: GoogleAppsScript.Spreadsheet.Range; // All data including headers
+  protected entryRange: GoogleAppsScript.Spreadsheet.Range; // All data excluding headers
 
-  protected _ids: Array<number>;
-  protected _headers: Array<string>;
-  protected _entries: Array<Array<any>>;
+  protected ids: Array<number>;
+  protected headers: Array<string>;
+  protected entries: Array<Array<any>>;
   protected numRows: number;
   protected numColumns: number;
   protected keysCreated: Array<number>;
-  protected _values: Array<Array<any>>;
+  protected allValues: Array<Array<any>>;
+  protected entryValues: Array<Array<any>>;
 
   constructor(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
-    this._sheet = sheet;
-    this._loadData();
+    this.sheet = sheet;
+    this.load();
   }
 
-  public getIds(): Array<number> {
-    return this._ids;
-  }
-  public getHeaders(): Array<string> {
-    return this._headers;
-  }
   public clearEntries(): void {
     // this._loadData(); // Probably not needed but might be good to have as failsafe
-    this._entryRange.clear();
+    this.entryRange.clear();
   }
 
-  protected _loadData(this: Table): void {
-    this._dataRange = this._sheet.getDataRange();
-    this._values = this._dataRange.getValues();
-    this._headers = this._values[0];
-    if (this._headers[0] !== "id") throw "first column must be 'id' lowercase";
-    this.numRows = this._values.length;
-    this.numColumns = this._values[0].length;
+  protected load(this: Table): void {
+    // Get all values from spreadsheet
+    this.dataRange = this.sheet.getDataRange();
+    this.allValues = this.dataRange.getValues();
+
+    // Assign values to object properties
+    this.headers = this.allValues[0];
+    if (this.headers[0] !== "id") throw "first column must be 'id' lowercase";
+    this.numRows = this.allValues.length;
+    this.numColumns = this.allValues[0].length;
+
+    if (this.numRows < 1) throw "0 rows? Headers must be present";
 
     if (this.numRows == 1) {
-      this._entryRange = null;
-      this._entries = [];
-      this._ids = [];
+      this.entryRange = null;
+      this.entries = [];
+      this.ids = [];
     } else if (this.numRows > 1) {
-      this._entryRange = this._sheet.getRange(
+      this.entryRange = this.sheet.getRange(
         2,
         1,
         this.numRows - 1,
         this.numColumns
       );
-      this._entries = this._values.slice(1, -1);
+      this.entries = this.allValues.slice(1, -1);
 
-      this._ids = this._entries
+      this.ids = this.entries
         .map((entry) => {
           if (typeof entry[0] !== "number")
             throw `All IDs must be numbers, ${entry[0]} is not a number`;
           return entry[0];
         })
         .flat();
-    } else throw "0 rows? Headers must be present";
+    }
   }
 
-  protected _update = () => {
+  protected update = () => {
     SpreadsheetApp.flush();
     // Utilities.sleep(1000)
-    this._loadData();
+    this.load();
   };
 
-  protected _getIdRowNumber(this: Table, searchId: number): number {
-    for (const [index, id] of this._ids.entries()) {
+  protected getIdRowNumber(searchId: number): number {
+    for (const [index, id] of this.ids.entries()) {
       if (id === searchId) {
         // index + 1 because rows begin at 1 not 0
         const rowNumber = index + 1;
@@ -106,15 +112,74 @@ class Table implements TableInterface {
       }
     }
   }
-  protected _addIndicesToFilterObject =
-    TableGetMethods.addIndicesToFilterObject;
+
+  protected convertFilterToIndexed(this: Table, filter: Filter): IndexedFilter {
+    return Object.entries(filter).reduce(
+      (acc: IndexedFilter, [header, value]: [string, any]): IndexedFilter => {
+        if (!this.headers.includes(header)) throw `"${header}" not found`;
+        acc[header] = {
+          headerColIndex: this.headers.indexOf(header),
+          value: value,
+        };
+        return acc;
+      },
+      {}
+    );
+  }
+
+  protected getRowsByFilter(filterObject: Filter): any[][] {
+    const filter = this.convertFilterToIndexed(filterObject);
+
+    const rowResults: any[][] = this.entries.reduce(
+      (output: any[], row: any[]): any[] => {
+        if (
+          Object.entries(filter).every(
+            ([_, { headerColIndex, value }]): boolean => {
+              if (row[headerColIndex] == value) return true;
+              return false;
+            }
+          )
+        ) {
+          output.push(row);
+        }
+        return output;
+      },
+      []
+    );
+
+    if (rowResults.length === 0) console.log("no results");
+
+    return rowResults;
+  }
+
+  public get(filter: Object = null) {
+    const rowResults = this.getRowsByFilter(filter || {});
+    if (rowResults.length === 0) return [];
+    if (rowResults[0][0] == "id") throw "header values are being returned";
+
+    const entries: Array<Entry> = rowResults.map((row) => {
+      // Assuming headers are already loaded...
+      return row.reduce(
+        (output: Entry, value: any, index: number) => {
+          const header = this.headers[index];
+          output[header] = value;
+          return output;
+        },
+        {} // output init
+      );
+    });
+
+    return entries;
+  }
+
+  public addEntry(entry: Entry): void {
+    const row = this.headers.map((header) => entry[header]);
+    this.addRow(row);
+    SpreadsheetApp.flush();
+  }
 
   public getColumnByHeader = TableGetMethods.getColumnByHeader;
   public getRowById = TableGetMethods.getRowById;
-  public getRowsByFilter = TableGetMethods.getRowsByFilter;
-
-  public getEntries = TableEntryMethods.getEntries;
-  public addEntry = TableEntryMethods.addEntry;
 
   public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
   public addRow = TableUpdateMethods.addRow;
