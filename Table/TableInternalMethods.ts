@@ -9,7 +9,7 @@ namespace TableInternalMethods {
 
     if (this.numRows == 1) {
       this.entryRange = null;
-      this.entries = [];
+      this.entryArray = [];
       this.ids = [];
     } else if (this.numRows > 1) {
       this.entryRange = this.sheet.getRange(
@@ -18,9 +18,9 @@ namespace TableInternalMethods {
         this.numRows - 1,
         this.numColumns
       );
-      this.entries = this.allValues.slice(1, -1);
+      this.entryArray = this.allValues.slice(1, -1);
 
-      this.ids = this.entries
+      this.ids = this.entryArray
         .map((entry) => {
           if (typeof entry[0] !== "number")
             throw `All IDs must be numbers, ${entry[0]} is not a number`;

@@ -43,12 +43,11 @@ class Table implements TableInterface {
   protected entryRange: GoogleAppsScript.Spreadsheet.Range; // All data excluding headers
   protected ids: number[];
   protected headers: string[];
-  protected entries: any[][];
+  protected entryArray: any[][];
   protected numRows: number;
   protected numColumns: number;
   protected keysCreated: number[];
   protected allValues: any[][];
-  protected entryValues: any[][];
 
   constructor(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
     this.sheet = sheet;
@@ -75,7 +74,7 @@ class Table implements TableInterface {
 
     if (this.numRows == 1) {
       this.entryRange = null;
-      this.entries = [];
+      this.entryArray = [];
       this.ids = [];
       return;
     }
@@ -86,9 +85,9 @@ class Table implements TableInterface {
       this.numRows - 1,
       this.numColumns
     );
-    this.entries = this.allValues.slice(1, -1);
+    this.entryArray = this.allValues.slice(1, -1);
 
-    this.ids = this.entries
+    this.ids = this.entryArray
       .map((entry) => {
         if (typeof entry[0] !== "number")
           throw `All IDs must be numbers, ${entry[0]} is not a number`;
@@ -125,7 +124,7 @@ class Table implements TableInterface {
   protected getRows(filterObject: Filter): any[][] {
     const filter = this.convertFilterToIndexed(filterObject);
 
-    const rowResults: any[][] = this.entries.reduce(
+    const rowResults: any[][] = this.entryArray.reduce(
       (output: any[], row: any[]): any[] => {
         if (
           Object.entries(filter).every(
@@ -171,26 +170,25 @@ class Table implements TableInterface {
     if (!this.headers.includes(headerName)) throw "No such header";
 
     const columnIndex: number = this.headers.indexOf(headerName);
-    return this.entries.map((entry) => entry[columnIndex]).flat();
+    return this.entryArray.map((entry) => entry[columnIndex]).flat();
   }
 
   protected getRowById(searchId: number): any[] {
-    for (const [index, id] of this.ids.entries()) {
-      if (id === searchId) {
-        // index + 1 because rows begin at 1 not 0
-        const rowNumber = index + 1;
-        const row = this.sheet
-          .getRange(rowNumber, 1, 1, this.numColumns)
-          .getValues()[0];
-        return { rowNumber, row };
-      }
-    }
+    return this.entryArray.find((entry) => entry[0] == searchId);
+  }
 
-    return undefined;
+  protected addRow(this: Table, row: Array<any>): number {
+    if (row.length > this.numColumns)
+      throw "too many values for number of named columns";
+    if (Boolean(row[0]) != false)
+      throw "id position (index 0) must be falsy (it will be discarded and a new key created)";
+    row[0] = this.createUniqueKeys(1)[0];
+    this.sheet.appendRow(row);
+    this.update();
+    return row[0]; // returning new ID
   }
 
   public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
-  public addRow = TableUpdateMethods.addRow;
   public updateValue = TableUpdateMethods.updateValue;
   public updateRow = TableUpdateMethods.updateRow;
   public deleteRow = TableUpdateMethods.deleteRow;
