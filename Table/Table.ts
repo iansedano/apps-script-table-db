@@ -1,110 +1,229 @@
-/*
-
-The design of this class must take into account the fact that the
-table will be reinitialized at every execution. Hence loading ids, headers,
-values are all done depending on the task at hand.
-
-*/
-
-type RowResult = {
-  rowNumber: number;
-  row: Array<any>;
-};
-
-type ColumnResult = {
-  columnNumber: number;
-  column: Array<any>;
-};
-
-type Filter = {}; // key is header and value is value to filter
-type OrderedFilterObject = { headers: string[]; values: any[] };
-type Entry = { id?: number };
-
 interface TableInterface {
-  getIds(): Array<number>;
-  getHeaders(): Array<string>;
-  getAllValues(): Array<Array<any>>;
-  getNumRows(): number;
-  getNumColumns(): number;
-  getKeysCreated(): Array<number>;
+  /**
+   * General purpose method to get entries as specified by a `filter` object.
+   * The `filter` argument is optional
+   * @param {RawFilter} [filter] Object with keys as headers and values the value to filter.
+   * @returns list of {@link Entry} objects
+   */
+  getEntries(filter?: Object): Entry[];
+  addEntries(entries: Entry[]): void;
+  updateEntry(entry: Entry): void;
+  updateValue(idToUpdate: number, headerName: string, value: any): Table;
 
-  getColumnByHeader(headerName: string): ColumnResult;
-  getRowById(id: number): RowResult;
-  getRowsByFilter(filterObject: Filter): Array<RowResult>; // empty obj returns everything
-  getEntries(filterObject: Filter): Array<Entry>; // empty obj returns everything
-
-  addEntry(entry: Entry): void;
-  addRow(row: Array<any>): void;
-  updateValue(idToUpdate: number, headerName: string, value: any): number;
-  updateRow(idToUpdate: number, row: Array<any>): void;
-  deleteRow(idToDelete: number): void;
-  createUniqueKeys(numberOfKeys: number): Array<number>;
+  clearAllEntries(): void;
 
   // checkUniqueKeys();
   // ensureSortedById();
   // checkLimits();
 }
 
-class _Table implements TableInterface {
-  private _file: GoogleAppsScript.Spreadsheet.Spreadsheet;
-  protected _sheet: GoogleAppsScript.Spreadsheet.Sheet;
-  protected _dataRange: GoogleAppsScript.Spreadsheet.Range;
-
-  protected ids: Array<number>;
-  protected headers: Array<string>;
+/**
+ * Base class for `table-db` library
+ */
+class Table implements TableInterface {
+  protected sheet: GoogleAppsScript.Spreadsheet.Sheet;
+  /** Range of all data in sheet _inlcuding_ headers. */
+  protected dataRange: GoogleAppsScript.Spreadsheet.Range;
+  /** Range of all data in sheet _excluding_ headers */
+  protected entryRange: GoogleAppsScript.Spreadsheet.Range;
+  protected ids: number[];
+  protected headers: string[];
+  /** A two dimensional array of all values in the sheet _excluding_ headers */
+  protected entryArray: any[][];
+  /** Total number of rows including headers */
   protected numRows: number;
   protected numColumns: number;
-  protected keysCreated: Array<number>;
-  protected allValues: Array<Array<any>>;
+  protected keysCreated: number[];
+  protected allValues: any[][];
 
-  constructor(SS_ID: string, sheetName: string) {
-    this._file = SpreadsheetApp.openById(SS_ID);
-    this._sheet = this._file.getSheetByName(sheetName);
-  }
-
-  public getIds(): Array<number> {
-    if (!this.ids) this._loadIds();
-    return this.ids;
-  }
-  public getHeaders(): Array<string> {
-    if (!this.headers) this._loadHeaders();
-    return this.headers;
-  }
-  public getAllValues(): Array<Array<any>> {
-    if (!this.allValues) this._loadAllValues();
-    return this.allValues;
-  }
-  public getNumRows(): number {
-    if (!this.numRows) this._loadDataRange();
-    return this.numRows;
-  }
-  public getNumColumns(): number {
-    if (!this.numColumns) this._loadDataRange();
-    return this.numColumns;
-  }
-  public getKeysCreated(): Array<number> {
-    return this.keysCreated;
+  constructor(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    this.sheet = sheet;
+    this.reset();
   }
 
-  protected _getRowNumber = TableInternalMethods._getRowNumber;
-  protected _refreshMetaData = TableInternalMethods._refreshMetaData;
-  protected _loadIds = TableInternalMethods._loadIds;
-  protected _loadHeaders = TableInternalMethods._loadHeaders;
-  protected _loadDataRange = TableInternalMethods._loadDataRange;
-  protected _loadAllValues = TableInternalMethods._loadAllValues;
+  public clearAllEntries(): void {
+    this.reset(); // Probably not needed but might be good to have as failsafe
+    this.entryRange.clear();
+  }
 
-  public getColumnByHeader = TableGetMethods.getColumnByHeader;
-  public getRowById = TableGetMethods.getRowById;
-  public getRowsByFilter = TableGetMethods.getRowsByFilter;
+  protected reset(): void {
+    // Get all values from spreadsheet
+    this.dataRange = this.sheet.getDataRange();
+    this.allValues = this.dataRange.getValues();
 
-  public getEntries = TableEntryMethods.getEntries;
-  public addEntry = TableEntryMethods.addEntry;
+    // Assign values to object properties
+    this.headers = this.allValues[0];
+    if (this.headers[0] !== "id") throw "first column must be 'id' lowercase";
+    this.numRows = this.allValues.length;
+    this.numColumns = this.allValues[0].length;
 
-  public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
-  public addRow = TableUpdateMethods.addRow;
-  public updateValue = TableUpdateMethods.updateValue;
-  public updateRow = TableUpdateMethods.updateRow;
-  public deleteRow = TableUpdateMethods.deleteRow;
+    if (this.numRows < 1) throw "0 rows? Headers must be present";
+
+    if (this.numRows == 1) {
+      this.entryRange = null;
+      this.entryArray = [];
+      this.ids = [];
+      return;
+    }
+
+    this.entryRange = this.sheet.getRange(
+      2,
+      1,
+      this.numRows - 1,
+      this.numColumns
+    );
+    this.entryArray = this.allValues.slice(1, -1);
+
+    this.ids = this.entryArray
+      .map((entry) => {
+        if (typeof entry[0] !== "number")
+          throw `All IDs must be numbers, ${entry[0]} is not a number`;
+        return entry[0];
+      })
+      .flat();
+  }
+
+  protected update = () => {
+    SpreadsheetApp.flush();
+    // Utilities.sleep(1000)
+    this.reset();
+  };
+
+  protected getIdRowNumber(searchId: number): number {
+    // index + 2 because rows begin at 1 not 0, and header row not included in ids
+    return this.ids.findIndex((id) => id == searchId) + 2;
+  }
+
+  protected getRows(filter: Filter): Frame {
+    const rowResults: Frame = this.entryArray.reduce(
+      (output: any[], row: any[]): any[] => {
+        if (
+          Object.entries(filter).every(
+            ([_, { headerColIndex, value }]): boolean => {
+              if (row[headerColIndex] == value) return true;
+              return false;
+            }
+          )
+        ) {
+          output.push(row);
+        }
+        return output;
+      },
+      []
+    );
+
+    if (rowResults.length === 0) console.log("no results");
+
+    return rowResults;
+  }
+
+  public getEntries(filter: Object = null): Entry[] {
+    const rowResults = this.getRows(new Filter(filter, this.headers));
+    if (rowResults.length === 0) return [];
+    if (rowResults[0][0] == "id") throw "header values are being returned";
+
+    return rowResults.map((row) => rowToEntry(row, this.headers));
+  }
+
+  /**
+   *
+   * @param entries array of entries _without_ id (they are created automatically)
+   *
+   */
+  public addEntries(entries: Entry[]): void {
+    this.addRows(entries.map((entry) => entryToRow(entry, this.headers)));
+    this.update();
+  }
+
+  /**
+   *
+   * @param headerName
+   * @returns `Series` representing one column
+   */
+  protected getColumnByHeader(headerName: string): Series {
+    if (!this.headers.includes(headerName)) throw "No such header";
+
+    const columnIndex: number = this.headers.indexOf(headerName);
+    return this.entryArray.map((entry) => entry[columnIndex]).flat();
+  }
+
+  /**
+   *
+   * @param searchId
+   * @returns `Series` representing one row
+   */
+  protected getRowById(searchId: number): Series {
+    return this.entryArray.find((entry) => entry[0] == searchId);
+  }
+
+  /**
+   * Add rows to the spreadsheet. First column must be falsy values because
+   * they will be replaced with the newly generated IDs.
+   *
+   * @param rows 2D array with _same number of columns_ as headers
+   * @returns Array of new ids
+   */
+  protected addRows(rows: Frame): number[] {
+    if (rows[0].length !== this.numColumns)
+      throw "rows to insert must have same length as headers";
+    const ids = this.createUniqueKeys(rows.length);
+    console.log(ids);
+    this.sheet
+      .getRange(this.numRows + 1, 1, rows.length, this.numColumns)
+      .setValues(
+        rows.map((row, i) => {
+          row[0] = ids[i];
+          return row;
+        })
+      );
+    this.update();
+    return ids;
+  }
+
+  protected createUniqueKeys(numberOfKeys: number): number[] {
+    if (this.ids.length == 0)
+      return Array(numberOfKeys)
+        .fill(0)
+        .map((_, i) => i + 1);
+
+    const sortedIds = this.ids.sort((idA, idB) => idA - idB);
+
+    const newKeys = [];
+    for (let i = 0; i != numberOfKeys; i++) {
+      newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i);
+    }
+
+    return newKeys;
+  }
+
+  public updateValue(
+    idToUpdate: number,
+    headerName: string,
+    value: Value
+  ): this {
+    if (!this.headers.includes(headerName))
+      throw `${headerName} doesn't exist in table`;
+
+    const rowNumber: number = this.getIdRowNumber(idToUpdate);
+    const colNumber = this.headers.indexOf(headerName) + 1;
+
+    this.sheet.getRange(rowNumber, colNumber).setValue(value);
+    this.update();
+    return this;
+  }
+
+  public updateEntry(entry: Entry): void {
+    if (!this.ids.includes(entry.id)) throw "ID doesn't exist in table";
+    this.getIdRowNumber(entry.id);
+    this.sheet
+      .getRange(this.getIdRowNumber(entry.id), 1, 1, this.numColumns)
+      .setValues([entryToRow(entry, this.headers)]);
+    this.update();
+  }
+
+  public deleteEntry(idToDelete: number): void {
+    const rowNumber: number = this.getIdRowNumber(idToDelete);
+    this.sheet.deleteRow(rowNumber);
+    this.update();
+  }
 }
-
-var Table = _Table;
