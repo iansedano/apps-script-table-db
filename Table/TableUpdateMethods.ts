@@ -1,22 +1,4 @@
 namespace TableUpdateMethods {
-  export function createUniqueKeys(
-    this: Table,
-    numberOfKeys: number
-  ): Array<number> {
-    if (this.ids.length == 0) {
-      return [1];
-    }
-
-    const sortedIds = this.ids.sort((idA, idB) => idA - idB);
-
-    const newKeys = [];
-    for (let i = 0; i != numberOfKeys; i++) {
-      newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i);
-    }
-
-    return newKeys;
-  }
-
   export function updateValue(
     this: Table,
     idToUpdate: number,

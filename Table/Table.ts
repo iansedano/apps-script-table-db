@@ -22,10 +22,10 @@ type Filter = { [key: string]: any };
 type IndexedFilter = { [key: string]: { headerColIndex: number; value: any } };
 
 interface TableInterface {
-  getEntries(filterObject: Object): Array<Entry>; // empty obj returns everything
-  addEntry(entry: Entry): void;
+  getEntries(filterObject: Object): Entry[]; // empty obj returns everything
+  addEntries(entries: Entry[]): void;
+  updateEntries(entries: Entry[]): void;
   updateValue(idToUpdate: number, headerName: string, value: any): number;
-  createUniqueKeys(numberOfKeys: number): Array<number>;
 
   clearEntries(): void;
 
@@ -35,15 +35,19 @@ interface TableInterface {
 }
 
 /**
- * Base class for table-db library
+ * Base class for `table-db` library
  */
 class Table implements TableInterface {
   protected sheet: GoogleAppsScript.Spreadsheet.Sheet;
-  protected dataRange: GoogleAppsScript.Spreadsheet.Range; // All data including headers
-  protected entryRange: GoogleAppsScript.Spreadsheet.Range; // All data excluding headers
+  /** Range of all data in sheet _inlcuding_ headers. */
+  protected dataRange: GoogleAppsScript.Spreadsheet.Range;
+  /** Range of all data in sheet _excluding_ headers */
+  protected entryRange: GoogleAppsScript.Spreadsheet.Range;
   protected ids: number[];
   protected headers: string[];
+  /** A two dimensional array of all values in the sheet _excluding_ headers */
   protected entryArray: any[][];
+  /** Total number of rows including headers */
   protected numRows: number;
   protected numColumns: number;
   protected keysCreated: number[];
@@ -107,7 +111,7 @@ class Table implements TableInterface {
     return this.ids.findIndex((id) => id == searchId) + 2;
   }
 
-  protected convertFilterToIndexed(this: Table, filter: Filter): IndexedFilter {
+  protected convertFilterToIndexed(filter: Filter): IndexedFilter {
     return Object.entries(filter).reduce(
       (acc: IndexedFilter, [header, value]: [string, any]): IndexedFilter => {
         if (!this.headers.includes(header)) throw `"${header}" not found`;
@@ -160,9 +164,22 @@ class Table implements TableInterface {
     });
   }
 
-  public addEntry(entry: Entry): void {
-    const row = this.headers.map((header) => entry[header]);
-    this.addRow(row);
+  /**
+   *
+   * @param entries array of entries _without_ id
+   *
+   */
+  public addEntries(entries: Entry[]): void {
+    this.addRows(
+      entries.map((entry: Entry) => {
+        Object.keys(entry).forEach((key: string) => {
+          if (!this.headers.includes(key))
+            throw `${key} header not present in table`;
+        });
+
+        return this.headers.map((header) => entry[header]);
+      })
+    );
     this.update();
   }
 
@@ -177,18 +194,46 @@ class Table implements TableInterface {
     return this.entryArray.find((entry) => entry[0] == searchId);
   }
 
-  protected addRow(this: Table, row: Array<any>): number {
-    if (row.length > this.numColumns)
-      throw "too many values for number of named columns";
-    if (Boolean(row[0]) != false)
-      throw "id position (index 0) must be falsy (it will be discarded and a new key created)";
-    row[0] = this.createUniqueKeys(1)[0];
-    this.sheet.appendRow(row);
+  /**
+   * Add rows to the spreadsheet. First column must be falsy values because
+   * they will be replaced with the newly generated IDs.
+   *
+   * @param rows 2D array with _same number of columns_ as headers
+   * @returns Array of new ids
+   */
+  protected addRows(rows: any[][]): number[] {
+    if (rows[0].length !== this.numColumns)
+      throw "rows to insert must have same length as headers";
+    const ids = this.createUniqueKeys(rows.length);
+    console.log(ids);
+    this.sheet
+      .getRange(this.numRows + 1, 1, rows.length, this.numColumns)
+      .setValues(
+        rows.map((row, i) => {
+          row[0] = ids[i];
+          return row;
+        })
+      );
     this.update();
-    return row[0]; // returning new ID
+    return ids;
   }
 
-  public createUniqueKeys = TableUpdateMethods.createUniqueKeys;
+  protected createUniqueKeys(numberOfKeys: number): number[] {
+    if (this.ids.length == 0)
+      return Array(numberOfKeys)
+        .fill(0)
+        .map((_, i) => i + 1);
+
+    const sortedIds = this.ids.sort((idA, idB) => idA - idB);
+
+    const newKeys = [];
+    for (let i = 0; i != numberOfKeys; i++) {
+      newKeys.push(sortedIds[sortedIds.length - 1] + 1 + i);
+    }
+
+    return newKeys;
+  }
+
   public updateValue = TableUpdateMethods.updateValue;
   public updateRow = TableUpdateMethods.updateRow;
   public deleteRow = TableUpdateMethods.deleteRow;
