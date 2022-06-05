@@ -1,33 +1,16 @@
-// TODO - remove
-type RowResult = {
-  rowNumber: number;
-  row: Array<any>;
-};
-
-/**
- * Object representing a row, with each key is a header name, and the value
- * is the row value
- */
-type Entry = { id?: number };
-
-/**
- * Object where key represents header and the value is the filter value
- * for that header.
- */
-type Filter = { [key: string]: any };
-
-/**
- * Extension of the {@link Filter} type that includes the column index of the header name
- */
-type IndexedFilter = { [key: string]: { headerColIndex: number; value: any } };
-
 interface TableInterface {
-  getEntries(filterObject: Object): Entry[]; // empty obj returns everything
+  /**
+   * General purpose method to get entries as specified by a `filter` object.
+   * The `filter` argument is optional
+   * @param {RawFilter} [filter] Object with keys as headers and values the value to filter.
+   * @returns list of {@link Entry} objects
+   */
+  getEntries(filter?: Object): Entry[];
   addEntries(entries: Entry[]): void;
-  updateEntries(entries: Entry[]): void;
-  updateValue(idToUpdate: number, headerName: string, value: any): number;
+  updateEntry(entry: Entry): void;
+  updateValue(idToUpdate: number, headerName: string, value: any): Table;
 
-  clearEntries(): void;
+  clearAllEntries(): void;
 
   // checkUniqueKeys();
   // ensureSortedById();
@@ -55,15 +38,15 @@ class Table implements TableInterface {
 
   constructor(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
     this.sheet = sheet;
-    this.load();
+    this.reset();
   }
 
-  public clearEntries(): void {
-    this.load(); // Probably not needed but might be good to have as failsafe
+  public clearAllEntries(): void {
+    this.reset(); // Probably not needed but might be good to have as failsafe
     this.entryRange.clear();
   }
 
-  protected load(this: Table): void {
+  protected reset(): void {
     // Get all values from spreadsheet
     this.dataRange = this.sheet.getDataRange();
     this.allValues = this.dataRange.getValues();
@@ -103,7 +86,7 @@ class Table implements TableInterface {
   protected update = () => {
     SpreadsheetApp.flush();
     // Utilities.sleep(1000)
-    this.load();
+    this.reset();
   };
 
   protected getIdRowNumber(searchId: number): number {
@@ -111,24 +94,8 @@ class Table implements TableInterface {
     return this.ids.findIndex((id) => id == searchId) + 2;
   }
 
-  protected convertFilterToIndexed(filter: Filter): IndexedFilter {
-    return Object.entries(filter).reduce(
-      (acc: IndexedFilter, [header, value]: [string, any]): IndexedFilter => {
-        if (!this.headers.includes(header)) throw `"${header}" not found`;
-        acc[header] = {
-          headerColIndex: this.headers.indexOf(header),
-          value: value,
-        };
-        return acc;
-      },
-      {}
-    );
-  }
-
-  protected getRows(filterObject: Filter): any[][] {
-    const filter = this.convertFilterToIndexed(filterObject);
-
-    const rowResults: any[][] = this.entryArray.reduce(
+  protected getRows(filter: Filter): Frame {
+    const rowResults: Frame = this.entryArray.reduce(
       (output: any[], row: any[]): any[] => {
         if (
           Object.entries(filter).every(
@@ -151,46 +118,41 @@ class Table implements TableInterface {
   }
 
   public getEntries(filter: Object = null): Entry[] {
-    const rowResults = this.getRows(filter || {});
+    const rowResults = this.getRows(new Filter(filter, this.headers));
     if (rowResults.length === 0) return [];
     if (rowResults[0][0] == "id") throw "header values are being returned";
 
-    return rowResults.map((row): Entry => {
-      return row.reduce((output: Entry, value: any, index: number): Entry => {
-        const header = this.headers[index];
-        output[header] = value;
-        return output;
-      }, {});
-    });
+    return rowResults.map((row) => rowToEntry(row, this.headers));
   }
 
   /**
    *
-   * @param entries array of entries _without_ id
+   * @param entries array of entries _without_ id (they are created automatically)
    *
    */
   public addEntries(entries: Entry[]): void {
-    this.addRows(
-      entries.map((entry: Entry) => {
-        Object.keys(entry).forEach((key: string) => {
-          if (!this.headers.includes(key))
-            throw `${key} header not present in table`;
-        });
-
-        return this.headers.map((header) => entry[header]);
-      })
-    );
+    this.addRows(entries.map((entry) => entryToRow(entry, this.headers)));
     this.update();
   }
 
-  protected getColumnByHeader(headerName: string): any[] {
+  /**
+   *
+   * @param headerName
+   * @returns `Series` representing one column
+   */
+  protected getColumnByHeader(headerName: string): Series {
     if (!this.headers.includes(headerName)) throw "No such header";
 
     const columnIndex: number = this.headers.indexOf(headerName);
     return this.entryArray.map((entry) => entry[columnIndex]).flat();
   }
 
-  protected getRowById(searchId: number): any[] {
+  /**
+   *
+   * @param searchId
+   * @returns `Series` representing one row
+   */
+  protected getRowById(searchId: number): Series {
     return this.entryArray.find((entry) => entry[0] == searchId);
   }
 
@@ -201,7 +163,7 @@ class Table implements TableInterface {
    * @param rows 2D array with _same number of columns_ as headers
    * @returns Array of new ids
    */
-  protected addRows(rows: any[][]): number[] {
+  protected addRows(rows: Frame): number[] {
     if (rows[0].length !== this.numColumns)
       throw "rows to insert must have same length as headers";
     const ids = this.createUniqueKeys(rows.length);
@@ -234,7 +196,34 @@ class Table implements TableInterface {
     return newKeys;
   }
 
-  public updateValue = TableUpdateMethods.updateValue;
-  public updateRow = TableUpdateMethods.updateRow;
-  public deleteRow = TableUpdateMethods.deleteRow;
+  public updateValue(
+    idToUpdate: number,
+    headerName: string,
+    value: Value
+  ): this {
+    if (!this.headers.includes(headerName))
+      throw `${headerName} doesn't exist in table`;
+
+    const rowNumber: number = this.getIdRowNumber(idToUpdate);
+    const colNumber = this.headers.indexOf(headerName) + 1;
+
+    this.sheet.getRange(rowNumber, colNumber).setValue(value);
+    this.update();
+    return this;
+  }
+
+  public updateEntry(entry: Entry): void {
+    if (!this.ids.includes(entry.id)) throw "ID doesn't exist in table";
+    this.getIdRowNumber(entry.id);
+    this.sheet
+      .getRange(this.getIdRowNumber(entry.id), 1, 1, this.numColumns)
+      .setValues([entryToRow(entry, this.headers)]);
+    this.update();
+  }
+
+  public deleteEntry(idToDelete: number): void {
+    const rowNumber: number = this.getIdRowNumber(idToDelete);
+    this.sheet.deleteRow(rowNumber);
+    this.update();
+  }
 }
