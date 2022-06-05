@@ -7,14 +7,15 @@ interface TableInterface {
    */
   getEntries(filter?: Object): Entry[];
   addEntries(entries: Entry[]): void;
+
+  /**
+   * @param entry Object with `id` key that exists in the table.
+   * Will overwrite existing entry with any keys that are headers.
+   * Keys that don't have a corresponding header in the table will throw an error.
+   */
   updateEntry(entry: Entry): void;
-  updateValue(idToUpdate: number, headerName: string, value: any): Table;
-
+  deleteEntry(idToDelete: number): void;
   clearAllEntries(): void;
-
-  // checkUniqueKeys();
-  // ensureSortedById();
-  // checkLimits();
 }
 
 /**
@@ -95,25 +96,8 @@ class Table implements TableInterface {
   }
 
   protected getRows(filter: Filter): Frame {
-    const rowResults: Frame = this.entryArray.reduce(
-      (output: any[], row: any[]): any[] => {
-        if (
-          Object.entries(filter).every(
-            ([_, { headerColIndex, value }]): boolean => {
-              if (row[headerColIndex] == value) return true;
-              return false;
-            }
-          )
-        ) {
-          output.push(row);
-        }
-        return output;
-      },
-      []
-    );
-
+    const rowResults: Frame = filter.filter(this.entryArray);
     if (rowResults.length === 0) console.log("no results");
-
     return rowResults;
   }
 
@@ -196,28 +180,19 @@ class Table implements TableInterface {
     return newKeys;
   }
 
-  public updateValue(
-    idToUpdate: number,
-    headerName: string,
-    value: Value
-  ): this {
-    if (!this.headers.includes(headerName))
-      throw `${headerName} doesn't exist in table`;
-
-    const rowNumber: number = this.getIdRowNumber(idToUpdate);
-    const colNumber = this.headers.indexOf(headerName) + 1;
-
-    this.sheet.getRange(rowNumber, colNumber).setValue(value);
-    this.update();
-    return this;
-  }
-
   public updateEntry(entry: Entry): void {
     if (!this.ids.includes(entry.id)) throw "ID doesn't exist in table";
-    this.getIdRowNumber(entry.id);
+    const existingEntry = this.getEntries({ id: entry.id });
+    const combinedRow = this.headers.reduce(
+      (acc: Series, header: string): Series => {
+        acc.push(entry[header] || existingEntry[header]);
+        return acc;
+      },
+      []
+    );
     this.sheet
       .getRange(this.getIdRowNumber(entry.id), 1, 1, this.numColumns)
-      .setValues([entryToRow(entry, this.headers)]);
+      .setValues([combinedRow]);
     this.update();
   }
 

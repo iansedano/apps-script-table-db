@@ -10,10 +10,15 @@ type RawFilter = { [key: string]: any };
 type IndexedFilter = { [key: string]: { headerColIndex: number; value: any } };
 
 class Filter {
-  constructor(filterObject: RawFilter = null, headers: string[]) {
-    if (filterObject == null) return {};
+  protected params: IndexedFilter;
 
-    return Object.entries(filterObject).reduce(
+  constructor(filterObject: RawFilter = null, headers: string[]) {
+    if (filterObject == null) {
+      this.params = {};
+      return;
+    }
+
+    this.params = Object.entries(filterObject).reduce(
       (acc: IndexedFilter, [header, value]: [string, any]): IndexedFilter => {
         if (!headers.includes(header)) throw `"${header}" not found`;
         acc[header] = {
@@ -24,5 +29,14 @@ class Filter {
       },
       {}
     );
+  }
+
+  public filter(frame: Frame) {
+    return frame.filter((row: Series) => {
+      Object.entries(this.params).every(
+        ([headerName, { headerColIndex, value }]): boolean =>
+          row[headerColIndex] == value
+      );
+    });
   }
 }
