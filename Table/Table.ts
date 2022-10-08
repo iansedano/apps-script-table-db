@@ -55,11 +55,12 @@ class Table implements TableInterface {
     // Assign values to object properties
     this.headers = this.allValues[0];
     if (this.headers[0] !== "id") throw "first column must be 'id' lowercase";
-    this.numRows = this.allValues.length;
+    this.numRows = this.allValues.length; // Includes headers
     this.numColumns = this.allValues[0].length;
 
     if (this.numRows < 1) throw "0 rows? Headers must be present";
 
+    // If sheet only has headers
     if (this.numRows == 1) {
       this.entryRange = null;
       this.entryArray = [];
