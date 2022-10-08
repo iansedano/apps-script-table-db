@@ -23,7 +23,7 @@ class Filter {
         if (!headers.includes(header)) throw `"${header}" not found`;
         acc[header] = {
           headerColIndex: headers.indexOf(header),
-          value: value,
+          value: value
         };
         return acc;
       },
@@ -33,7 +33,7 @@ class Filter {
 
   public filter(frame: Frame) {
     return frame.filter((row: Series) => {
-      Object.entries(this.params).every(
+      return Object.entries(this.params).every(
         ([headerName, { headerColIndex, value }]): boolean =>
           row[headerColIndex] == value
       );
