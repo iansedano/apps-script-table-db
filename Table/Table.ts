@@ -74,7 +74,7 @@ class Table implements TableInterface {
       this.numRows - 1,
       this.numColumns
     );
-    this.entryArray = this.allValues.slice(1, -1);
+    this.entryArray = this.allValues.slice(1);
 
     this.ids = this.entryArray
       .map((entry) => {
