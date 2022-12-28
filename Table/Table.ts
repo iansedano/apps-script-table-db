@@ -102,18 +102,23 @@ class Table implements TableInterface {
     return rowResults;
   }
 
-  public getEntries(filter: Object = null): Entry[] {
+  public getEntries(filter: Object = null, options: Object = null): Entry[] {
     const rowResults = this.getRows(new Filter(filter, this.headers));
-    if (rowResults.length === 0) return [];
-    if (rowResults[0][0] == "id") throw "header values are being returned";
+    const _options = { throwsOnEmpty: false, unique: false, ...options };
+
+    if (rowResults.length === 0 && _options.throwsOnEmpty) {
+      throw `No rows found matching ${filter}`;
+    } else if (rowResults.length === 0) {
+      return [];
+    } else if (rowResults.length > 1 && _options.unique) {
+      throw `More than one row matching ${filter} and unique option specified`;
+    }
 
     return rowResults.map((row) => rowToEntry(row, this.headers));
   }
 
   /**
-   *
    * @param entries array of entries _without_ id (they are created automatically)
-   *
    */
   public addEntries(entries: Entry[]): void {
     this.addRows(entries.map((entry) => entryToRow(entry, this.headers)));
@@ -121,7 +126,6 @@ class Table implements TableInterface {
   }
 
   /**
-   *
    * @param headerName
    * @returns `Series` representing one column
    */
@@ -133,7 +137,6 @@ class Table implements TableInterface {
   }
 
   /**
-   *
    * @param searchId
    * @returns `Series` representing one row
    */
